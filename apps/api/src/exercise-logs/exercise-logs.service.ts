@@ -7,6 +7,7 @@ import {
   ownedExerciseWhere,
 } from '../exercises/owned-exercise.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { formatCents, toCents } from '../reports/weight-math.js';
 import { SessionsService } from '../sessions/sessions.service.js';
 import type { CreateExerciseLogDto } from './dto/create-exercise-log.dto.js';
 import type { HistoryQueryDto } from './dto/history-query.dto.js';
@@ -21,6 +22,16 @@ export interface ExerciseLogResponse {
   id: string;
   performedAt: string;
   sets: ExerciseLogSetResponse[];
+}
+
+export interface PersonalRecordResponse {
+  weightKg: string;
+  previousKg: string;
+}
+
+export interface CreatedExerciseLogResponse extends ExerciseLogResponse {
+  /** Set when the heaviest set beats every earlier set of this exercise. */
+  record: PersonalRecordResponse | null;
 }
 
 export interface HistoryLogSessionResponse {
@@ -102,7 +113,7 @@ export class ExerciseLogsService {
     userId: string,
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
-  ): Promise<ExerciseLogResponse> {
+  ): Promise<CreatedExerciseLogResponse> {
     return this.createForExercise(userId, exerciseSlug, dto, false);
   }
 
@@ -110,7 +121,7 @@ export class ExerciseLogsService {
     userId: string,
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
-  ): Promise<ExerciseLogResponse> {
+  ): Promise<CreatedExerciseLogResponse> {
     return this.createForExercise(userId, exerciseSlug, dto, true);
   }
 
@@ -183,8 +194,8 @@ export class ExerciseLogsService {
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
     isCustom: boolean,
-  ): Promise<ExerciseLogResponse> {
-    const exerciseLog = await this.prisma.client.$transaction(
+  ): Promise<CreatedExerciseLogResponse> {
+    const { exerciseLog, previousBest } = await this.prisma.client.$transaction(
       async (transaction) => {
         const exercise = await transaction.exercise.findFirst({
           where: libraryExerciseWhere(userId, exerciseSlug, isCustom),
@@ -200,8 +211,12 @@ export class ExerciseLogsService {
           transaction,
           userId,
         );
+        const previous = await transaction.exerciseSet.aggregate({
+          _max: { weightKg: true },
+          where: { exerciseLog: { userId, exerciseId: exercise.id } },
+        });
 
-        return transaction.exerciseLog.create({
+        const created = await transaction.exerciseLog.create({
           data: {
             userId,
             exerciseId: exercise.id,
@@ -216,10 +231,27 @@ export class ExerciseLogsService {
           },
           select: exerciseLogSelect,
         });
+
+        return { exerciseLog: created, previousBest: previous._max.weightKg };
       },
     );
 
-    return this.toResponse(exerciseLog);
+    const top = dto.sets.reduce(
+      (max, set) => (toCents(set.weightKg) > max ? toCents(set.weightKg) : max),
+      0n,
+    );
+    const previousCents = previousBest ? toCents(previousBest) : null;
+
+    return {
+      ...this.toResponse(exerciseLog),
+      record:
+        previousCents !== null && top > previousCents
+          ? {
+              weightKg: formatCents(top),
+              previousKg: formatCents(previousCents),
+            }
+          : null,
+    };
   }
 
   private async findRecentForExercise(

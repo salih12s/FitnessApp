@@ -39,3 +39,31 @@ export interface ExerciseReport {
   } | null;
   points: ReportPoint[];
 }
+
+export interface MuscleGroupVolume {
+  name: string;
+  slug: string;
+  volumeKg: string;
+  setCount: number;
+}
+
+export interface PersonalRecordEvent {
+  exercise: { name: string; slug: string; isCustom: boolean };
+  weightKg: string;
+  reps: number;
+  previousKg: string;
+  performedAt: string;
+}
+
+export interface ReportOverview {
+  last7Days: {
+    workoutDays: number;
+    setCount: number;
+    volumeKg: string;
+    previousVolumeKg: string;
+  };
+  /** Consecutive Monday-based weeks with at least one workout. */
+  streakWeeks: number;
+  muscleGroups: MuscleGroupVolume[];
+  recentRecords: PersonalRecordEvent[];
+}

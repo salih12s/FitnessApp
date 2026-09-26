@@ -9,8 +9,8 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 | 0     | Precision redesign         | No            | Done    |
 | 1     | Log corrections            | No            | Done    |
 | 2     | Workout sessions           | Yes           | Done    |
-| 3     | Advanced reports           | No            | Next    |
-| 4     | Programs and templates     | Yes           | Planned |
+| 3     | Advanced reports           | No            | Done    |
+| 4     | Programs and templates     | Yes           | Next    |
 | 5     | Profile and account        | Yes           | Planned |
 | 6     | Coach and client mode      | Yes           | Planned |
 | 7     | Offline logging (optional) | No            | Planned |
@@ -123,11 +123,18 @@ New `sessions` module (thin controller, logic in a service, `AccessTokenGuard`, 
 - The migration applies cleanly on a copy of the current local database, and `docs/database.md` is updated.
 - Everything works at 375px in light and dark themes.
 
+## Phase 3: Advanced reports (done)
+
+No schema change.
+
+- `GET /api/reports/overview?offset=<minutes>`: last 7 days (training days, sets, volume, and the previous 7 days' volume), consecutive Monday-based training weeks, last-7-days volume per muscle group, and the five latest personal records (a log whose heaviest set beats every earlier set of that exercise). `offset` is the client's UTC offset so days and weeks follow its clock.
+- Creating a log returns `record: { weightKg, previousKg } | null`; the entry form celebrates a new record.
+- Reports page: overview tiles, a muscle heat map on the anatomy artwork (with a text list so color is never the only signal), recent records, and an exercise chart that switches between top weight, estimated 1RM (Epley: `weight × (1 + reps / 30)`), and volume. The home page shows the overview tiles.
+
 ## Later phases (summary)
 
 Detailed specs are written when a phase starts.
 
-- **Phase 3, advanced reports:** estimated 1RM per exercise (Epley: `weight × (1 + reps / 30)`), total volume, set and rep trends; weekly volume per muscle group shown as a heat map on the existing muscle artwork; summary panel (workouts this week, streak, recent records); a celebration when a new record is logged.
 - **Phase 4, programs and templates:** `WorkoutTemplate` and `TemplateExercise` models with target sets, reps, and kg; start a session from a template with one tap (depends on phase 2); a calendar of sessions and planned days.
 - **Phase 5, profile and account:** change password; sign out other sessions (refresh-session infrastructure exists); account deletion (needs a separate decision about workout history before implementation); `BodyMeasurement` model with charts; kg/lb display preference (always store kg); CSV export.
 - **Phase 6, coach and client mode:** see the decisions below. `CoachClient` relation created through an invite code or link that the client accepts; the client can remove a coach at any time; coach dashboard with client list, last activity, and progress summary; coaches can assign phase 4 templates. Ownership checks in existing services gain "or a linked coach". Later: coach comments on logs.

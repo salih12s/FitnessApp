@@ -14,6 +14,7 @@ import { getMuscleGroups, muscleGroupKeys } from '@/api/muscle-groups';
 import {
   getExerciseReport,
   getReportExercises,
+  getReportOverview,
   reportKeys,
 } from '@/api/reports';
 import { ExerciseListItem } from '@/components/common/exercise-list-item';
@@ -22,6 +23,7 @@ import { MuscleGroupCard } from '@/components/common/muscle-group-card';
 import { PageHeader } from '@/components/common/page-header';
 import { SectionHeading } from '@/components/common/section-heading';
 import { Sparkline } from '@/components/common/sparkline';
+import { OverviewStats } from '@/components/reports/overview-stats';
 import { StartSessionButton } from '@/components/sessions/start-session-button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/auth/use-auth';
@@ -95,6 +97,12 @@ export function MuscleGroupsPage() {
     retry: 1,
   });
   const latestReportExercise = reportExercisesQuery.data?.[0];
+  const overviewQuery = useQuery({
+    queryKey: reportKeys.overview,
+    queryFn: getReportOverview,
+    enabled: Boolean(latestReportExercise),
+    retry: 1,
+  });
   const latestReportQuery = useQuery({
     queryKey: reportKeys.detail(
       latestReportExercise?.slug ?? '',
@@ -143,10 +151,16 @@ export function MuscleGroupsPage() {
         title={`${getGreeting(new Date())}, ${user?.username ?? ''}`}
       />
 
+      {overviewQuery.data ? (
+        <div className="animate-rise mt-6" style={{ '--i': 2 }}>
+          <OverviewStats overview={overviewQuery.data} />
+        </div>
+      ) : null}
+
       {latestSummary && latestReportExercise ? (
         <Link
           aria-label={`${latestReportExercise.name} gelişim raporunu aç`}
-          className="animate-rise group mt-6 grid gap-4 rounded-lg border border-border bg-surface p-4 outline-none transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-[0_12px_28px_-20px_var(--shadow-tint)] focus-visible:ring-3 focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-end sm:gap-8 sm:p-5"
+          className="animate-rise group mt-2 grid gap-4 rounded-lg border border-border bg-surface p-4 outline-none transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-[0_12px_28px_-20px_var(--shadow-tint)] focus-visible:ring-3 focus-visible:ring-ring sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] sm:items-end sm:gap-8 sm:p-5"
           style={{ '--i': 2 }}
           to="/app/reports"
         >

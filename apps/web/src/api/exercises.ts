@@ -1,5 +1,6 @@
 import { authorizedRequest } from '@/lib/api';
 import type {
+  CreatedExerciseLog,
   ExerciseDetail,
   ExerciseLog,
   ExerciseSetInput,
@@ -59,7 +60,7 @@ export function createExerciseLog(
   slug: string,
   sets: ExerciseSetInput[],
   isCustom = false,
-): Promise<ExerciseLog> {
+): Promise<CreatedExerciseLog> {
   const path = `${exerciseApiPath(slug, isCustom)}/logs`;
   return authorizedRequest(path, {
     method: 'POST',

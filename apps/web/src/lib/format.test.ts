@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatWeight, formatWeightChange } from './format';
+import { formatVolume, formatWeight, formatWeightChange } from './format';
 
 describe('weight formatting', () => {
   it('uses the Turkish decimal comma and drops trailing zeros', () => {
@@ -8,6 +8,12 @@ describe('weight formatting', () => {
     expect(formatWeight('90.00')).toBe('90');
     expect(formatWeight('48.75')).toBe('48,75');
     expect(formatWeight(0)).toBe('0');
+  });
+
+  it('switches volume to tonnes above 1000 kg', () => {
+    expect(formatVolume('850.5')).toEqual({ value: '851', unit: 'kg' });
+    expect(formatVolume('10987.5')).toEqual({ value: '11', unit: 't' });
+    expect(formatVolume(12_440)).toEqual({ value: '12,4', unit: 't' });
   });
 
   it('signs gains but not losses twice', () => {

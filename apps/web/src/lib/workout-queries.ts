@@ -15,6 +15,7 @@ export function invalidateWorkoutQueries(
     }),
     queryClient.invalidateQueries({ queryKey: ['history'] }),
     queryClient.invalidateQueries({ queryKey: reportKeys.exercises }),
+    queryClient.invalidateQueries({ queryKey: reportKeys.overview }),
     queryClient.invalidateQueries({ queryKey: ['reports', 'detail'] }),
     // Session counts and volume change with every logged set.
     queryClient.invalidateQueries({ queryKey: sessionKeys.active }),

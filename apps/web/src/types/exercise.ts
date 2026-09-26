@@ -28,6 +28,11 @@ export interface ExerciseLog {
   sets: ExerciseLogSet[];
 }
 
+export interface CreatedExerciseLog extends ExerciseLog {
+  /** Present when this log beats every earlier set of the exercise. */
+  record: { weightKg: string; previousKg: string } | null;
+}
+
 export interface ExerciseSetInput {
   weightKg: string;
   reps: number;

@@ -1,13 +1,18 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Save } from 'lucide-react';
+import { CheckCircle2, Save, Trophy } from 'lucide-react';
+import * as m from 'motion/react-m';
 
 import { createExerciseLog, exerciseKeys } from '@/api/exercises';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
 import { formatWeight } from '@/lib/format';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
-import type { ExerciseLog, ExerciseSetInput } from '@/types/exercise';
+import type {
+  CreatedExerciseLog,
+  ExerciseLog,
+  ExerciseSetInput,
+} from '@/types/exercise';
 import { useActiveSession } from '@/components/sessions/use-active-session';
 import { RestTimer } from './rest-timer';
 import { SetEditor } from './set-editor';
@@ -47,6 +52,7 @@ export function WorkoutEntrySection({
   const isDirty = useRef(false);
   const [isComplete, setIsComplete] = useState(false);
   const [savedLogId, setSavedLogId] = useState<string | null>(null);
+  const [record, setRecord] = useState<CreatedExerciseLog['record']>(null);
 
   useEffect(() => {
     if (!isDirty.current) {
@@ -61,8 +67,10 @@ export function WorkoutEntrySection({
       createExerciseLog(exerciseSlug, sets, isCustom),
     onSuccess: async (savedLog) => {
       if ('vibrate' in navigator) {
-        navigator.vibrate(12);
+        // A longer pattern marks a new personal record.
+        navigator.vibrate(savedLog.record ? [40, 60, 40, 60, 120] : 12);
       }
+      setRecord(savedLog.record);
       editor.reset(savedLog.sets);
       isDirty.current = false;
       queryClient.setQueryData<ExerciseLog[]>(
@@ -145,7 +153,42 @@ export function WorkoutEntrySection({
               {getSaveErrorMessage(mutation.error)}
             </p>
           ) : null}
-          {isComplete ? (
+          {isComplete && record ? (
+            <m.div
+              animate={{ opacity: 1, scale: 1 }}
+              aria-live="polite"
+              className="mt-4 flex items-center gap-3 rounded-md border border-primary/30 bg-primary/10 p-3.5"
+              initial={{ opacity: 0, scale: 0.96 }}
+              role="status"
+              transition={{ type: 'spring', stiffness: 380, damping: 26 }}
+            >
+              <m.span
+                animate={{ rotate: 0, scale: 1 }}
+                className="grid size-10 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground"
+                initial={{ rotate: -20, scale: 0.4 }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 460,
+                  damping: 14,
+                  delay: 0.08,
+                }}
+              >
+                <Trophy aria-hidden="true" className="size-5" />
+              </m.span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">
+                  Yeni kişisel rekor
+                </p>
+                <p className="metric-number mt-0.5 text-sm text-muted-foreground">
+                  <span className="font-semibold text-primary">
+                    {formatWeight(record.weightKg)} kg
+                  </span>{' '}
+                  · önceki {formatWeight(record.previousKg)} kg
+                </p>
+              </div>
+            </m.div>
+          ) : null}
+          {isComplete && !record ? (
             <div
               aria-live="polite"
               className="mt-4 flex items-start gap-3 rounded-md border border-success/25 bg-success/8 p-3.5 text-success"
