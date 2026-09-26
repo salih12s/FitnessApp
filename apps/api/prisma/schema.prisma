@@ -21,6 +21,7 @@ model User {
   exerciseLogs    ExerciseLog[]
   exercisePrefs   ExercisePreference[]
   refreshSessions RefreshSession[]
+  workoutSessions WorkoutSession[]
 
   @@map("users")
 }
@@ -93,22 +94,42 @@ model ExercisePreference {
 }
 
 model ExerciseLog {
-  id           String        @id @default(uuid()) @db.Char(36)
-  userId       String        @map("user_id") @db.Char(36)
-  exerciseId   String        @map("exercise_id") @db.Char(36)
-  performedAt  DateTime      @default(now()) @map("performed_at") @db.DateTime(3)
-  notes        String?       @db.Text
-  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  exercise     Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id           String          @id @default(uuid()) @db.Char(36)
+  userId       String          @map("user_id") @db.Char(36)
+  exerciseId   String          @map("exercise_id") @db.Char(36)
+  sessionId    String?         @map("session_id") @db.Char(36)
+  performedAt  DateTime        @default(now()) @map("performed_at") @db.DateTime(3)
+  notes        String?         @db.Text
+  createdAt    DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exercise     Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  session      WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   exerciseSets ExerciseSet[]
 
   @@index([userId, performedAt(sort: Desc)])
   @@index([userId, exerciseId, performedAt(sort: Desc)])
   @@index([exerciseId, performedAt(sort: Desc)])
   @@index([performedAt])
+  @@index([sessionId])
   @@map("exercise_logs")
+}
+
+/// One visit to the gym. `endedAt` is null while the session is active; a
+/// user has at most one active session (enforced in SessionsService).
+model WorkoutSession {
+  id           String        @id @default(uuid()) @db.Char(36)
+  userId       String        @map("user_id") @db.Char(36)
+  startedAt    DateTime      @default(now()) @map("started_at") @db.DateTime(3)
+  endedAt      DateTime?     @map("ended_at") @db.DateTime(3)
+  note         String?       @db.Text
+  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exerciseLogs ExerciseLog[]
+
+  @@index([userId, startedAt(sort: Desc)])
+  @@map("workout_sessions")
 }
 
 model ExerciseSet {

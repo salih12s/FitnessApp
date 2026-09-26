@@ -8,8 +8,8 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 | ----- | -------------------------- | ------------- | ------- |
 | 0     | Precision redesign         | No            | Done    |
 | 1     | Log corrections            | No            | Done    |
-| 2     | Workout sessions           | Yes           | Next    |
-| 3     | Advanced reports           | No            | Planned |
+| 2     | Workout sessions           | Yes           | Done    |
+| 3     | Advanced reports           | No            | Next    |
 | 4     | Programs and templates     | Yes           | Planned |
 | 5     | Profile and account        | Yes           | Planned |
 | 6     | Coach and client mode      | Yes           | Planned |
@@ -98,7 +98,7 @@ New `sessions` module (thin controller, logic in a service, `AccessTokenGuard`, 
 - `POST /api/sessions`: start a session. If the user already has an active session, return it instead of creating a second one (idempotent, safe against double taps).
 - `GET /api/sessions/active`: `{ session: SessionResponse | null }`.
 - `PATCH /api/sessions/:id`: update `note` (max 1000 characters).
-- `POST /api/sessions/:id/finish`: optional `note`; sets `endedAt` to now. If the session has no logs, delete it instead (nothing to keep) and respond `204`.
+- `POST /api/sessions/:id/finish`: optional `note`; sets `endedAt` to now and responds `{ session }`. If the session has no logs, delete it instead (nothing to keep) and respond `{ session: null }`.
 - `SessionResponse`: `id`, `startedAt`, `endedAt`, `note`, `exerciseCount`, `setCount`, `totalVolumeKg` (sum of `weightKg × reps` as a decimal string, like other weights).
 - Stale sessions: a session active for more than 6 hours is finished automatically the next time the user starts a session or reads the active session. Its `endedAt` becomes the `performedAt` of its last log, or `startedAt` when it has none (then delete it, as above).
 - Logging: `ExerciseLogsService` create flow attaches the new log to the user's active session when there is one. The request body does not change.

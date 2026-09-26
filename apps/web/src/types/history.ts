@@ -1,4 +1,5 @@
 import type { ExerciseLogSet, MuscleReference } from './exercise';
+import type { HistorySession } from './session';
 
 export interface HistoryExercise {
   name: string;
@@ -12,6 +13,7 @@ export interface HistoryLog {
   performedAt: string;
   sets: ExerciseLogSet[];
   exercise: HistoryExercise;
+  session: HistorySession | null;
 }
 
 export interface HistoryPage {

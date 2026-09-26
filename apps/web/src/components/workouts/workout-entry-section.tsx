@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api';
 import { formatWeight } from '@/lib/format';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
 import type { ExerciseLog, ExerciseSetInput } from '@/types/exercise';
+import { useActiveSession } from '@/components/sessions/use-active-session';
 import { RestTimer } from './rest-timer';
 import { SetEditor } from './set-editor';
 import { useWorkoutSets } from './use-workout-sets';
@@ -42,6 +43,7 @@ export function WorkoutEntrySection({
 }: WorkoutEntrySectionProps) {
   const queryClient = useQueryClient();
   const editor = useWorkoutSets();
+  const { data: activeSession } = useActiveSession();
   const isDirty = useRef(false);
   const [isComplete, setIsComplete] = useState(false);
   const [savedLogId, setSavedLogId] = useState<string | null>(null);
@@ -97,6 +99,15 @@ export function WorkoutEntrySection({
         <p className="mt-0.5 text-sm text-muted-foreground">
           Ağırlık ve tekrarlarını set set gir, sonra kaydet.
         </p>
+        {activeSession ? (
+          <p className="mt-2 flex items-center gap-2 text-xs font-medium text-primary">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-primary"
+            />
+            Bu kayıt sürmekte olan antrenmanına eklenecek.
+          </p>
+        ) : null}
         {recentLog ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <p>

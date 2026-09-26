@@ -9,7 +9,10 @@ import { LogCardActions } from '@/components/workouts/log-card-actions';
 import { Button } from '@/components/ui/button';
 import { exercisePath } from '@/lib/exercise-path';
 import { formatWeight } from '@/lib/format';
+import { groupHistory, totalVolumeKg } from '@/lib/history-groups';
+import { formatClock, formatDuration } from '@/lib/session-time';
 import type { HistoryLog } from '@/types/history';
+import type { HistorySession } from '@/types/session';
 
 const historyKeys = {
   all: ['history'] as const,
@@ -38,29 +41,57 @@ function HistoryLoading() {
   );
 }
 
-function formatDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+function SessionBlock({
+  session,
+  logs,
+}: {
+  session: HistorySession;
+  logs: HistoryLog[];
+}) {
+  const volume = totalVolumeKg(logs);
 
-  return `${year}-${month}-${day}`;
-}
-
-function groupByDate(logs: HistoryLog[]): [string, HistoryLog[]][] {
-  const groups = new Map<string, HistoryLog[]>();
-
-  for (const log of logs) {
-    const key = formatDateKey(new Date(log.performedAt));
-    const group = groups.get(key);
-
-    if (group) {
-      group.push(log);
-    } else {
-      groups.set(key, [log]);
-    }
-  }
-
-  return [...groups.entries()];
+  return (
+    <section
+      aria-label={`Antrenman, ${formatClock(session.startedAt)}`}
+      className="rounded-lg border border-border bg-surface-soft p-1.5"
+    >
+      <header className="px-2.5 pb-2.5 pt-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <h3 className="text-sm font-semibold text-foreground">
+            Antrenman{' '}
+            <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
+              {formatClock(session.startedAt)}
+              {session.endedAt ? ` - ${formatClock(session.endedAt)}` : ''}
+            </span>
+          </h3>
+          <p className="font-mono text-xs tabular-nums text-muted-foreground">
+            {session.endedAt ? (
+              formatDuration(
+                new Date(session.endedAt).getTime() -
+                  new Date(session.startedAt).getTime(),
+              )
+            ) : (
+              <span className="font-sans font-medium text-primary">
+                Devam ediyor
+              </span>
+            )}
+            {' · '}
+            {logs.length} hareket · {formatWeight(volume)} kg
+          </p>
+        </div>
+        {session.note ? (
+          <p className="mt-1.5 text-pretty text-sm text-muted-foreground">
+            {session.note}
+          </p>
+        ) : null}
+      </header>
+      <div className="grid gap-1.5">
+        {logs.map((log, index) => (
+          <HistoryLogCard index={index} key={log.id} log={log} />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
@@ -141,7 +172,7 @@ export function HistoryPage() {
     retry: 1,
   });
   const logs = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
-  const dateGroups = groupByDate(logs);
+  const days = groupHistory(logs);
 
   return (
     <div>
@@ -175,9 +206,9 @@ export function HistoryPage() {
         </div>
       ) : null}
 
-      {dateGroups.length > 0 ? (
+      {days.length > 0 ? (
         <div className="mt-8 space-y-7">
-          {dateGroups.map(([dateKey, dateLogs]) => (
+          {days.map(({ dateKey, logCount, blocks }) => (
             <section aria-labelledby={`history-date-${dateKey}`} key={dateKey}>
               <h2
                 className="mb-2.5 flex items-baseline justify-between gap-3 text-sm font-semibold text-foreground"
@@ -185,13 +216,25 @@ export function HistoryPage() {
               >
                 {dateHeadingFormatter.format(new Date(`${dateKey}T12:00:00`))}
                 <span className="font-mono text-xs font-normal tabular-nums text-muted-foreground">
-                  {dateLogs.length} hareket
+                  {logCount} hareket
                 </span>
               </h2>
               <div className="grid gap-2">
-                {dateLogs.map((log, index) => (
-                  <HistoryLogCard index={index} key={log.id} log={log} />
-                ))}
+                {blocks.map((block, index) =>
+                  block.kind === 'session' ? (
+                    <SessionBlock
+                      key={`session-${block.session.id}`}
+                      logs={block.logs}
+                      session={block.session}
+                    />
+                  ) : (
+                    <HistoryLogCard
+                      index={index}
+                      key={block.log.id}
+                      log={block.log}
+                    />
+                  ),
+                )}
               </div>
             </section>
           ))}

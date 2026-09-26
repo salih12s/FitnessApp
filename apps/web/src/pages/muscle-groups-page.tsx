@@ -22,6 +22,7 @@ import { MuscleGroupCard } from '@/components/common/muscle-group-card';
 import { PageHeader } from '@/components/common/page-header';
 import { SectionHeading } from '@/components/common/section-heading';
 import { Sparkline } from '@/components/common/sparkline';
+import { StartSessionButton } from '@/components/sessions/start-session-button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/auth/use-auth';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -127,13 +128,16 @@ export function MuscleGroupsPage() {
     <div>
       <PageHeader
         action={
-          <Link
-            className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-semibold text-foreground shadow-[0_1px_2px_var(--shadow-tint)] outline-none transition-[background-color,transform] duration-200 hover:bg-surface-elevated focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98]"
-            to="/app/exercises/custom/new"
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Özel hareket
-          </Link>
+          <div className="flex flex-wrap items-start gap-2">
+            <StartSessionButton />
+            <Link
+              className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border-strong bg-surface px-4 text-sm font-semibold text-foreground shadow-[0_1px_2px_var(--shadow-tint)] outline-none transition-[background-color,transform] duration-200 hover:bg-surface-elevated focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98]"
+              to="/app/exercises/custom/new"
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Özel hareket
+            </Link>
+          </div>
         }
         description="Bir kas grubu seç ya da doğrudan hareket ara."
         title={`${getGreeting(new Date())}, ${user?.username ?? ''}`}

@@ -143,6 +143,7 @@ The API serves the built web app, so one Hostinger Node.js web app hosts both.
 2. Upload the zip in hPanel with the NestJS preset, Node.js 24, build command `npm run build`, output directory `dist`, and entry file `main.cjs` (NestJS entry files are relative to the output directory).
 3. Set `DATABASE_URL` (`mysql://USER:PASSWORD@127.0.0.1:3306/DATABASE`), `JWT_ACCESS_SECRET`, `JWT_ACCESS_TTL_SECONDS`, `REFRESH_TOKEN_TTL_DAYS`, `REFRESH_COOKIE_SECURE=true`, and `FRONTEND_URL` as environment variables.
 4. For a new database, import a SQL file with the schema, the seeded library, and the Prisma migration record through phpMyAdmin.
+5. Before deploying a build that includes a new migration, apply it to the live database first. Run the new `apps/api/prisma/migrations/<timestamp>_<name>/migration.sql` in phpMyAdmin, then record it in `_prisma_migrations` (or run `npx prisma migrate deploy` from a machine that can reach the database). Test every migration on the local database (`env-local.bat`) before touching the live one. `20260926162620_add_workout_sessions` (workout sessions) is the first migration after the initial schema.
 
 ## Current status
 

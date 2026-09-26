@@ -7,6 +7,7 @@ import {
   ownedExerciseWhere,
 } from '../exercises/owned-exercise.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import type { CreateExerciseLogDto } from './dto/create-exercise-log.dto.js';
 import type { HistoryQueryDto } from './dto/history-query.dto.js';
 
@@ -22,7 +23,15 @@ export interface ExerciseLogResponse {
   sets: ExerciseLogSetResponse[];
 }
 
+export interface HistoryLogSessionResponse {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+  note: string | null;
+}
+
 export interface HistoryLogResponse extends ExerciseLogResponse {
+  session: HistoryLogSessionResponse | null;
   exercise: {
     name: string;
     slug: string;
@@ -77,11 +86,17 @@ const historyLogSelect = (userId: string) =>
         preferences: exerciseNameOverrideSelect(userId),
       },
     },
+    session: {
+      select: { id: true, startedAt: true, endedAt: true, note: true },
+    },
   }) as const;
 
 @Injectable()
 export class ExerciseLogsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sessionsService: SessionsService,
+  ) {}
 
   async create(
     userId: string,
@@ -180,10 +195,17 @@ export class ExerciseLogsService {
           throw new NotFoundException('Exercise was not found.');
         }
 
+        // Logs saved during an active workout session belong to it.
+        const sessionId = await this.sessionsService.activeSessionId(
+          transaction,
+          userId,
+        );
+
         return transaction.exerciseLog.create({
           data: {
             userId,
             exerciseId: exercise.id,
+            sessionId,
             exerciseSets: {
               create: dto.sets.map((set, index) => ({
                 setNumber: index + 1,
@@ -316,9 +338,25 @@ export class ExerciseLogsService {
       muscleGroup: { name: string; slug: string };
       preferences: { customName: string | null }[];
     };
+    session: {
+      id: string;
+      startedAt: Date;
+      endedAt: Date | null;
+      note: string | null;
+    } | null;
   }): HistoryLogResponse {
+    const { session } = exerciseLog;
+
     return {
       ...this.toResponse(exerciseLog),
+      session: session
+        ? {
+            id: session.id,
+            startedAt: session.startedAt.toISOString(),
+            endedAt: session.endedAt?.toISOString() ?? null,
+            note: session.note,
+          }
+        : null,
       exercise: {
         name: displayExerciseName(exerciseLog.exercise),
         slug: exerciseLog.exercise.slug,

@@ -6,10 +6,14 @@ import { BottomNavigation } from '@/components/layout/bottom-navigation';
 import { BrandMark } from '@/components/common/brand-mark';
 import { UserBadge } from '@/components/common/user-badge';
 import { DesktopNavigation } from '@/components/layout/desktop-navigation';
+import { ActiveSessionBar } from '@/components/sessions/active-session-bar';
+import { useActiveSession } from '@/components/sessions/use-active-session';
+import { cn } from '@/lib/utils';
 
 export function AppShell() {
   const { pathname } = useLocation();
   const { user } = useAuth();
+  const { data: activeSession } = useActiveSession();
 
   return (
     <div className="relative min-h-svh bg-background lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
@@ -36,9 +40,16 @@ export function AppShell() {
       </header>
 
       <main
-        className="min-w-0 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0"
+        className={cn(
+          'min-w-0 lg:pb-0',
+          // Leave room for the fixed session bar above the bottom navigation.
+          activeSession
+            ? 'pb-[calc(11rem+env(safe-area-inset-bottom))]'
+            : 'pb-[calc(6rem+env(safe-area-inset-bottom))]',
+        )}
         id="main-content"
       >
+        <ActiveSessionBar />
         {/* Keyed by path so each screen enters with the same short rise. */}
         <m.div
           animate={{ opacity: 1, y: 0 }}

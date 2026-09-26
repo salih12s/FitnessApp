@@ -10,6 +10,8 @@ User
 ├── ExercisePreference
 ├── ExerciseLog
 │   └── ExerciseSet
+├── WorkoutSession
+│   └── ExerciseLog (optional)
 └── RefreshSession
 
 Exercise
@@ -33,7 +35,8 @@ The exercise library currently contains 125 practical commercial-gym exercises. 
 - **MuscleGroup:** A uniquely named and uniquely slugged classification.
 - **Exercise:** A global or user-owned exercise with one required muscle group, instructions, and optional equipment/media fields. `isCustom` and nullable `createdByUserId` distinguish user-owned exercises.
 - **ExercisePreference:** One user's customization of one exercise, unique per `(userId, exerciseId)`: an optional display-name override (`customName`) and an optional `hiddenAt` marker for exercises removed from that user's library.
-- **ExerciseLog:** One historical exercise performance/session entry belonging to exactly one user and exercise.
+- **ExerciseLog:** One historical exercise performance belonging to exactly one user and exercise, optionally inside a workout session.
+- **WorkoutSession:** One visit to the gym, owned by one user, with `startedAt`, a nullable `endedAt` (null while the session is active), and an optional note. A user has at most one active session; `SessionsService` enforces this inside a transaction that locks the user row, because MySQL has no partial unique index. Logs created while a session is active get its `sessionId`. Logs created outside a session, including every log from before sessions existed, keep `sessionId` null. A session active for more than 6 hours is finished automatically at its last log's time the next time the user reads or starts a session; one without logs is deleted instead, as is a session finished without logs.
 - **ExerciseSet:** One ordered set within an exercise log, with its own weight and repetition count.
 
 `ExerciseLog` contains session-level context such as exercise, user, date, and notes. `ExerciseSet` is separate because each set can use a different weight and repetition count. Set order is determined by `setNumber`, which is unique within its log. Queries should order sets by `setNumber ASC`.
@@ -60,6 +63,8 @@ Renaming or deleting an exercise from the library never changes the shared globa
 
 Deleting an `ExerciseLog` cascades only to its `ExerciseSet` children because sets have no meaning outside their parent log.
 
+`ExerciseLog.sessionId` uses `SET NULL` on delete: removing a `WorkoutSession` detaches its logs and never deletes workout history. `WorkoutSession.userId` uses `RESTRICT`, like other user-owned history.
+
 Deleting a `User` cascades to its `RefreshSession` and `ExercisePreference` records because sessions and display preferences have no meaning without the account. Deleting an `Exercise` cascades to its `ExercisePreference` records for the same reason. Historical exercise relationships retain their restrictive deletion behavior.
 
 Foreign keys cascade identifier updates so references remain consistent, although UUID identifiers should normally be immutable.
@@ -75,6 +80,8 @@ Foreign keys cascade identifier updates so references remain consistent, althoug
 - `ExerciseLog(userId, exerciseId, performedAt DESC)` supports the authenticated user's recent history for one exercise.
 - `ExerciseLog(exerciseId, performedAt DESC)` supports progress history for an exercise.
 - `ExerciseLog(performedAt)` supports date-range queries across logs.
+- `ExerciseLog(sessionId)` supports loading a session's logs and the session foreign key.
+- `WorkoutSession(userId, startedAt DESC)` supports finding a user's active and recent sessions.
 - `ExerciseSet(exerciseLogId, setNumber)` is unique, prevents duplicate set positions, and supports ordered set lookup without an additional redundant index.
 
 Every log query must be scoped to the authenticated user so one user's history is never returned to another user.
