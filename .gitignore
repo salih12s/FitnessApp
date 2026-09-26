@@ -1,7 +1,11 @@
 node_modules/
 dist/
+deploy/
 coverage/
 .vite/
+apps/web/dev-dist/
+artifacts/
+apps/api/src/generated/prisma/
 
 .env
 .env.*

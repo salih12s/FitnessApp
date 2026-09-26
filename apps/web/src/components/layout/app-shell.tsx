@@ -1,20 +1,57 @@
-import { Outlet } from 'react-router';
+import * as m from 'motion/react-m';
+import { Link, Outlet, useLocation } from 'react-router';
 
+import { useAuth } from '@/auth/use-auth';
+import { BottomNavigation } from '@/components/layout/bottom-navigation';
 import { BrandMark } from '@/components/common/brand-mark';
+import { UserBadge } from '@/components/common/user-badge';
+import { DesktopNavigation } from '@/components/layout/desktop-navigation';
 
 export function AppShell() {
+  const { pathname } = useLocation();
+  const { user } = useAuth();
+
   return (
-    <div className="relative isolate min-h-svh overflow-hidden bg-background">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-primary/35"
-      />
-      <header className="mx-auto flex w-full max-w-6xl items-center px-5 py-5 sm:px-8 sm:py-6 lg:px-10">
-        <BrandMark />
+    <div className="relative min-h-svh bg-background lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <DesktopNavigation />
+
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-lg sm:px-8 lg:hidden">
+        <div className="mx-auto flex max-w-2xl items-center justify-between">
+          <Link
+            className="inline-flex rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring"
+            to="/app"
+          >
+            <BrandMark />
+          </Link>
+          {user ? (
+            <Link
+              aria-label="Profil"
+              className="rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring"
+              to="/app/profile"
+            >
+              <UserBadge username={user.username} />
+            </Link>
+          ) : null}
+        </div>
       </header>
-      <main>
-        <Outlet />
+
+      <main
+        className="min-w-0 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-0"
+        id="main-content"
+      >
+        {/* Keyed by path so each screen enters with the same short rise. */}
+        <m.div
+          animate={{ opacity: 1, y: 0 }}
+          className="relative mx-auto w-full max-w-5xl px-4 py-6 sm:px-8 sm:py-10 lg:px-12 lg:py-12"
+          initial={{ opacity: 0, y: 10 }}
+          key={pathname}
+          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <Outlet />
+        </m.div>
       </main>
+
+      <BottomNavigation />
     </div>
   );
 }

@@ -1,0 +1,126 @@
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  runtime                = "nodejs"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id              String               @id @default(uuid()) @db.Char(36)
+  username        String               @unique
+  passwordHash    String               @map("password_hash")
+  createdAt       DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  exercises       Exercise[]           @relation("CustomExerciseOwner")
+  exerciseLogs    ExerciseLog[]
+  exercisePrefs   ExercisePreference[]
+  refreshSessions RefreshSession[]
+
+  @@map("users")
+}
+
+model RefreshSession {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @map("user_id") @db.Char(36)
+  tokenHash String   @unique @map("token_hash") @db.Char(64)
+  expiresAt DateTime @map("expires_at") @db.DateTime(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
+model MuscleGroup {
+  id        String     @id @default(uuid()) @db.Char(36)
+  name      String     @unique
+  slug      String     @unique
+  createdAt DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime   @updatedAt @map("updated_at") @db.DateTime(3)
+  exercises Exercise[]
+
+  @@map("muscle_groups")
+}
+
+model Exercise {
+  id              String               @id @default(uuid()) @db.Char(36)
+  name            String
+  slug            String
+  slugNamespace   String               @default("global") @map("slug_namespace")
+  description     String?              @db.Text
+  equipment       String?
+  imageUrl        String?              @map("image_url") @db.VarChar(2048)
+  isCustom        Boolean              @default(false) @map("is_custom")
+  createdByUserId String?              @map("created_by_user_id") @db.Char(36)
+  muscleGroupId   String               @map("muscle_group_id") @db.Char(36)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  createdByUser   User?                @relation("CustomExerciseOwner", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  muscleGroup     MuscleGroup          @relation(fields: [muscleGroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exerciseLogs    ExerciseLog[]
+  preferences     ExercisePreference[]
+
+  @@unique([slugNamespace, slug])
+  @@index([createdByUserId])
+  @@index([muscleGroupId])
+  @@map("exercises")
+}
+
+/// Per-user library customization: a display name override or a hidden
+/// (deleted from the user's library) marker. Workout history is unaffected.
+model ExercisePreference {
+  id         String    @id @default(uuid()) @db.Char(36)
+  userId     String    @map("user_id") @db.Char(36)
+  exerciseId String    @map("exercise_id") @db.Char(36)
+  customName String?   @map("custom_name")
+  hiddenAt   DateTime? @map("hidden_at") @db.DateTime(3)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exercise   Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, exerciseId])
+  @@index([exerciseId])
+  @@map("exercise_preferences")
+}
+
+model ExerciseLog {
+  id           String        @id @default(uuid()) @db.Char(36)
+  userId       String        @map("user_id") @db.Char(36)
+  exerciseId   String        @map("exercise_id") @db.Char(36)
+  performedAt  DateTime      @default(now()) @map("performed_at") @db.DateTime(3)
+  notes        String?       @db.Text
+  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exercise     Exercise      @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exerciseSets ExerciseSet[]
+
+  @@index([userId, performedAt(sort: Desc)])
+  @@index([userId, exerciseId, performedAt(sort: Desc)])
+  @@index([exerciseId, performedAt(sort: Desc)])
+  @@index([performedAt])
+  @@map("exercise_logs")
+}
+
+model ExerciseSet {
+  id            String      @id @default(uuid()) @db.Char(36)
+  exerciseLogId String      @map("exercise_log_id") @db.Char(36)
+  setNumber     Int         @map("set_number")
+  weightKg      Decimal     @map("weight_kg") @db.Decimal(6, 2)
+  reps          Int
+  createdAt     DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+  exerciseLog   ExerciseLog @relation(fields: [exerciseLogId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([exerciseLogId, setNumber])
+  @@map("exercise_sets")
+}

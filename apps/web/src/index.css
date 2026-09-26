@@ -1,31 +1,63 @@
 @import 'tailwindcss';
 
+/* Light is the base palette. `index.html` resolves the saved or system theme
+   before first paint and sets `data-theme` on <html>. */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --background: oklch(0.135 0.008 155);
-  --surface: oklch(0.17 0.009 155);
-  --surface-elevated: oklch(0.205 0.011 155);
-  --border: oklch(0.29 0.012 155);
-  --text-primary: oklch(0.965 0.006 145);
-  --text-secondary: oklch(0.69 0.012 145);
-  --primary: oklch(0.78 0.19 142);
-  --primary-foreground: oklch(0.15 0.025 145);
-  --success: oklch(0.72 0.16 151);
-  --warning: oklch(0.8 0.16 78);
-  --destructive: oklch(0.64 0.21 27);
-  --ring: oklch(0.78 0.19 142 / 55%);
+  --background: #f3f4f6;
+  --surface: #ffffff;
+  --surface-soft: #eceef1;
+  --surface-elevated: #f5f6f8;
+  --surface-strong: #e8eaee;
+  --border: rgb(15 17 21 / 9%);
+  --border-strong: rgb(15 17 21 / 16%);
+  --text-primary: #0f1115;
+  --text-secondary: #5d636d;
+  --primary: #cf4510;
+  --primary-foreground: #ffffff;
+  --success: #15803d;
+  --warning: #b45309;
+  --destructive: #dc2626;
+  --ring: rgb(207 69 16 / 40%);
+  --shadow-tint: rgb(15 17 21 / 14%);
 
   --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --background: #0e0f11;
+  --surface: #16181b;
+  --surface-soft: #121316;
+  --surface-elevated: #1d2024;
+  --surface-strong: #25282d;
+  --border: rgb(255 255 255 / 7.5%);
+  --border-strong: rgb(255 255 255 / 14%);
+  --text-primary: #edeef0;
+  --text-secondary: #8b909a;
+  --primary: #ff6a2b;
+  --primary-foreground: #1a0a03;
+  --success: #3fb950;
+  --warning: #e3a008;
+  --destructive: #f25555;
+  --ring: rgb(255 106 43 / 45%);
+  --shadow-tint: rgb(0 0 0 / 55%);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
   --color-surface-elevated: var(--surface-elevated);
+  --color-surface-strong: var(--surface-strong);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--text-primary);
   --color-muted-foreground: var(--text-secondary);
   --color-primary: var(--primary);
@@ -40,8 +72,11 @@
   --radius-lg: var(--radius-lg);
 
   --font-sans:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    'Segoe UI', sans-serif;
+    'Geist Variable', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:
+    'Geist Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    monospace;
 }
 
 * {
@@ -54,7 +89,7 @@ html {
 
 body {
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100svh;
   margin: 0;
   background: var(--background);
   color: var(--text-primary);
@@ -62,6 +97,24 @@ body {
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+  overflow-x: clip;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+input[type='number'] {
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
 }
 
 button,
@@ -69,7 +122,73 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+h1,
+h2,
+h3 {
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
 ::selection {
-  background: color-mix(in oklch, var(--primary) 30%, transparent);
+  background: color-mix(in oklch, var(--primary) 28%, transparent);
   color: var(--text-primary);
+}
+
+/* Comparable performance values: monospaced, tabular digits. */
+.metric-number {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+/* Entry cascade for lists and grids. Set --i on each item for its order. */
+.animate-rise {
+  animation: rise 0.5s var(--ease-out) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 40ms);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* Loading placeholder with a moving highlight instead of a flat pulse. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--text-primary) 6%, transparent),
+    transparent
+  );
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

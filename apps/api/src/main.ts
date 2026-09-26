@@ -1,18 +1,51 @@
-import { NestFactory } from '@nestjs/core';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module.js';
 
+// A production package places the built web app in `dist/public` so a single
+// Node.js process serves both the site and the API.
+const webRoot = fileURLToPath(new URL('./public', import.meta.url));
+
+function serveWebApp(app: NestExpressApplication): void {
+  const indexFile = join(webRoot, 'index.html');
+  if (!existsSync(indexFile)) return;
+
+  app.useStaticAssets(webRoot, { index: false });
+  // Client-side routes such as /app/reports resolve to the single-page app.
+  app.use((request: Request, response: Response, next: NextFunction) => {
+    if (request.method !== 'GET' || request.path.startsWith('/api')) {
+      next();
+      return;
+    }
+    response.sendFile(indexFile);
+  });
+}
+
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3001);
   const frontendUrl = config.get<string>(
     'FRONTEND_URL',
-    'http://localhost:3000',
+    'http://localhost:3005',
   );
 
   app.setGlobalPrefix('api');
+  serveWebApp(app);
+  app.useGlobalPipes(
+    new ValidationPipe({
+      forbidNonWhitelisted: true,
+      transform: true,
+      whitelist: true,
+    }),
+  );
   app.enableCors({
     origin: frontendUrl,
     credentials: true,
@@ -21,4 +54,6 @@ async function bootstrap() {
   await app.listen(port, '0.0.0.0');
 }
 
-await bootstrap();
+// No top-level await: hosts such as Hostinger load the entry file with
+// require(), which rejects ES modules that use it.
+void bootstrap();
