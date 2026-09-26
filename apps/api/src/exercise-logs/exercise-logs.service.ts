@@ -115,6 +115,54 @@ export class ExerciseLogsService {
     return this.findRecentForExercise(userId, exerciseSlug, limit, true);
   }
 
+  async update(
+    userId: string,
+    id: string,
+    dto: CreateExerciseLogDto,
+  ): Promise<ExerciseLogResponse> {
+    const exerciseLog = await this.prisma.client.$transaction(
+      async (transaction) => {
+        const existing = await transaction.exerciseLog.findFirst({
+          where: { id, userId },
+          select: { id: true },
+        });
+
+        if (!existing) {
+          throw new NotFoundException('Workout log was not found.');
+        }
+
+        await transaction.exerciseSet.deleteMany({
+          where: { exerciseLogId: id },
+        });
+        await transaction.exerciseSet.createMany({
+          data: dto.sets.map((set, index) => ({
+            exerciseLogId: id,
+            setNumber: index + 1,
+            weightKg: set.weightKg,
+            reps: set.reps,
+          })),
+        });
+
+        return transaction.exerciseLog.findUniqueOrThrow({
+          where: { id },
+          select: exerciseLogSelect,
+        });
+      },
+    );
+
+    return this.toResponse(exerciseLog);
+  }
+
+  async remove(userId: string, id: string): Promise<void> {
+    const result = await this.prisma.client.exerciseLog.deleteMany({
+      where: { id, userId },
+    });
+
+    if (result.count === 0) {
+      throw new NotFoundException('Workout log was not found.');
+    }
+  }
+
   private async createForExercise(
     userId: string,
     exerciseSlug: string,

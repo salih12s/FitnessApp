@@ -167,6 +167,8 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
           <WorkoutEntrySection
             exerciseSlug={exercise.slug}
             isCustom={exercise.isCustom}
+            key={exercise.id}
+            recentLog={recentLogsQuery.data?.[0]}
           />
 
           <div className="mt-3">
@@ -176,6 +178,8 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
               isPending={recentLogsQuery.isPending}
               onRetry={() => void recentLogsQuery.refetch()}
               recentLog={recentLogsQuery.data?.[0]}
+              exerciseSlug={exercise.slug}
+              isCustom={exercise.isCustom}
             />
           </div>
         </>

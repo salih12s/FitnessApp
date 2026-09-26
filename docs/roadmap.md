@@ -7,8 +7,8 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 | Phase | Title                      | Schema change | Status  |
 | ----- | -------------------------- | ------------- | ------- |
 | 0     | Precision redesign         | No            | Done    |
-| 1     | Log corrections            | No            | Next    |
-| 2     | Workout sessions           | Yes           | Planned |
+| 1     | Log corrections            | No            | Done    |
+| 2     | Workout sessions           | Yes           | Next    |
 | 3     | Advanced reports           | No            | Planned |
 | 4     | Programs and templates     | Yes           | Planned |
 | 5     | Profile and account        | Yes           | Planned |
@@ -78,11 +78,55 @@ Frontend only; no API or storage on the server.
 - The rest timer counts down correctly, including after switching tabs, and vibrates at the end on supported phones.
 - Everything works at 375px in light and dark themes.
 
+## Phase 2: Workout sessions
+
+Schema change. Groups the exercises a user logs in one visit to the gym into a session. Logging without a session keeps working exactly as today.
+
+### 2a. Schema
+
+- New model `WorkoutSession` (table `workout_sessions`), following the conventions in `docs/database.md` (UUID `Char(36)` ids, snake_case column names, `DateTime(3)`):
+  - `id`, `userId` (required, `onDelete: Restrict`), `startedAt` (default now), `endedAt` (nullable; null means the session is active), `note` (nullable `Text`), `createdAt`, `updatedAt`.
+  - Index `(userId, startedAt DESC)`.
+- `ExerciseLog.sessionId`: nullable, relation to `WorkoutSession` with `onDelete: SetNull` so removing a session can never remove workout history. Index `sessionId`. Existing rows stay `null`; the migration must not touch existing data.
+- A user has at most one active session. MySQL has no partial unique index, so enforce this in the service inside a transaction.
+- Create the migration with `npm run prisma:migrate -- --name add_workout_sessions` against the local database (`env-local.bat` first). Update `docs/database.md` (relationship tree, entities, deletion behavior) and add a short README note that this migration must be applied on Hostinger before deploying the new build.
+
+### 2b. API
+
+New `sessions` module (thin controller, logic in a service, `AccessTokenGuard`, ownership by `userId` exactly like phase 1, `ParseUUIDPipe` on ids, 404 for sessions of other users):
+
+- `POST /api/sessions`: start a session. If the user already has an active session, return it instead of creating a second one (idempotent, safe against double taps).
+- `GET /api/sessions/active`: `{ session: SessionResponse | null }`.
+- `PATCH /api/sessions/:id`: update `note` (max 1000 characters).
+- `POST /api/sessions/:id/finish`: optional `note`; sets `endedAt` to now. If the session has no logs, delete it instead (nothing to keep) and respond `204`.
+- `SessionResponse`: `id`, `startedAt`, `endedAt`, `note`, `exerciseCount`, `setCount`, `totalVolumeKg` (sum of `weightKg × reps` as a decimal string, like other weights).
+- Stale sessions: a session active for more than 6 hours is finished automatically the next time the user starts a session or reads the active session. Its `endedAt` becomes the `performedAt` of its last log, or `startedAt` when it has none (then delete it, as above).
+- Logging: `ExerciseLogsService` create flow attaches the new log to the user's active session when there is one. The request body does not change.
+- History: each `HistoryLogResponse` gains `session: { id, startedAt, endedAt, note } | null`.
+
+### 2c. Web
+
+- Active-session bar in `AppShell`, visible on every signed-in page while a session is active: elapsed time as a mono clock (`32:14`, computed from `startedAt`, not by counting ticks), the number of exercises logged, and a `Bitir` action. On mobile it sits directly above the bottom navigation; on desktop, at the top of the content area. Page bottom padding must grow so it never covers content.
+- Home page: when no session is active, a primary `Antrenmana başla` action near the top. Starting a session keeps the user on the home page so they can pick a muscle group.
+- Exercise page: while a session is active, show a one-line note in the entry card that the log will be added to the current session.
+- Finish flow (inline panel or bottom sheet, not a browser dialog): summary with duration, exercises, sets, and total volume; optional note field; `Antrenmanı bitir` and `Vazgeç`. After finishing, show a short confirmation.
+- History page: keep the day groups. Inside a day, logs that share a session appear under one session header: time range (`18:05 - 19:02`), duration, exercise count, total volume, and the note when present. Logs without a session keep today's card layout.
+- Put the grouping (day, then session) and duration formatting in pure modules under `lib/` with unit tests.
+- Invalidate or update the active-session query after logging, editing, or deleting a log so counts stay correct.
+
+### Done when
+
+- A user can start, use, and finish a session; logs saved during it are grouped in history.
+- Logging without a session works as before, and all existing logs still appear.
+- Double-tapping start creates one session; a session left open overnight is closed automatically.
+- Another user's session ids return 404.
+- The migration applies cleanly on a copy of the current local database, and `docs/database.md` is updated.
+- Everything works at 375px in light and dark themes.
+
 ## Later phases (summary)
 
 Detailed specs are written when a phase starts.
 
-- **Phase 2, workout sessions:** `WorkoutSession` model (start, end, note). Optional `ExerciseLog.sessionId`; existing logs stay without a session. "Antrenmana başla / bitir" flow. The history page groups logs by day and session.
 - **Phase 3, advanced reports:** estimated 1RM per exercise (Epley: `weight × (1 + reps / 30)`), total volume, set and rep trends; weekly volume per muscle group shown as a heat map on the existing muscle artwork; summary panel (workouts this week, streak, recent records); a celebration when a new record is logged.
 - **Phase 4, programs and templates:** `WorkoutTemplate` and `TemplateExercise` models with target sets, reps, and kg; start a session from a template with one tap (depends on phase 2); a calendar of sessions and planned days.
 - **Phase 5, profile and account:** change password; sign out other sessions (refresh-session infrastructure exists); account deletion (needs a separate decision about workout history before implementation); `BodyMeasurement` model with charts; kg/lb display preference (always store kg); CSV export.

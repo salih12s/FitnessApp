@@ -67,6 +67,22 @@ export function createExerciseLog(
   });
 }
 
+export function updateExerciseLog(
+  id: string,
+  sets: ExerciseSetInput[],
+): Promise<ExerciseLog> {
+  return authorizedRequest(`/logs/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ sets }),
+  });
+}
+
+export function deleteExerciseLog(id: string): Promise<void> {
+  return authorizedRequest(`/logs/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 export function renameExercise(
   exercise: Pick<ExerciseSummary, 'slug' | 'isCustom'>,
   name: string,

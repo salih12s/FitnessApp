@@ -2,12 +2,15 @@ import { AlertTriangle } from 'lucide-react';
 
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import type { ExerciseLog } from '@/types/exercise';
+import { LogCardActions } from './log-card-actions';
 
 interface RecentWorkoutProps {
   isError: boolean;
   isFetching: boolean;
   isPending: boolean;
   recentLog?: ExerciseLog;
+  exerciseSlug: string;
+  isCustom: boolean;
   onRetry: () => void;
 }
 
@@ -22,6 +25,8 @@ export function RecentWorkout({
   isFetching,
   isPending,
   recentLog,
+  exerciseSlug,
+  isCustom,
   onRetry,
 }: RecentWorkoutProps) {
   if (isPending) {
@@ -65,25 +70,35 @@ export function RecentWorkout({
       </div>
 
       {recentLog ? (
-        <ol className="mt-3 divide-y divide-border">
-          {recentLog.sets.map((set) => (
-            <li
-              className="flex min-h-11 items-center justify-between gap-4 py-2 text-sm"
-              key={set.setNumber}
-            >
-              <span className="text-muted-foreground">Set {set.setNumber}</span>
-              <span className="metric-number text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">
-                  {set.weightKg}
-                </span>{' '}
-                kg ×{' '}
-                <span className="font-semibold text-foreground">
-                  {set.reps}
+        <>
+          <ol className="mt-3 divide-y divide-border">
+            {recentLog.sets.map((set) => (
+              <li
+                className="flex min-h-11 items-center justify-between gap-4 py-2 text-sm"
+                key={set.setNumber}
+              >
+                <span className="text-muted-foreground">
+                  Set {set.setNumber}
                 </span>
-              </span>
-            </li>
-          ))}
-        </ol>
+                <span className="metric-number text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground">
+                    {set.weightKg}
+                  </span>{' '}
+                  kg ×{' '}
+                  <span className="font-semibold text-foreground">
+                    {set.reps}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ol>
+          <LogCardActions
+            key={recentLog.id}
+            log={recentLog}
+            exerciseSlug={exerciseSlug}
+            isCustom={isCustom}
+          />
+        </>
       ) : (
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Bu hareket için henüz kaydedilmiş bir antrenmanın yok.

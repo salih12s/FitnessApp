@@ -5,6 +5,7 @@ import { Link } from 'react-router';
 import { getHistory } from '@/api/exercises';
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import { PageHeader } from '@/components/common/page-header';
+import { LogCardActions } from '@/components/workouts/log-card-actions';
 import { Button } from '@/components/ui/button';
 import { exercisePath } from '@/lib/exercise-path';
 import type { HistoryLog } from '@/types/history';
@@ -113,6 +114,11 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
           </li>
         ))}
       </ol>
+      <LogCardActions
+        exerciseSlug={log.exercise.slug}
+        isCustom={log.exercise.isCustom}
+        log={log}
+      />
     </article>
   );
 }

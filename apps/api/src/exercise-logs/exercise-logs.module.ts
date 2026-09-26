@@ -5,6 +5,7 @@ import { CustomExerciseLogsController } from './custom-exercise-logs.controller.
 import { ExerciseLogsController } from './exercise-logs.controller.js';
 import { ExerciseLogsService } from './exercise-logs.service.js';
 import { HistoryController } from './history.controller.js';
+import { LogsController } from './logs.controller.js';
 
 @Module({
   imports: [AuthModule],
@@ -12,6 +13,7 @@ import { HistoryController } from './history.controller.js';
     ExerciseLogsController,
     CustomExerciseLogsController,
     HistoryController,
+    LogsController,
   ],
   providers: [ExerciseLogsService],
 })
