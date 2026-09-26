@@ -1,5 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, History, House, UserRound } from 'lucide-react';
+import {
+  BarChart3,
+  ClipboardList,
+  History,
+  House,
+  UserRound,
+} from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
@@ -10,6 +16,7 @@ export interface NavigationItem {
 export const navigationItems: readonly NavigationItem[] = [
   { label: 'Ana sayfa', to: '/app', icon: House },
   { label: 'Antrenmanlar', to: '/app/history', icon: History },
+  { label: 'Programlar', to: '/app/programs', icon: ClipboardList },
   { label: 'Raporlar', to: '/app/reports', icon: BarChart3 },
   { label: 'Profil', to: '/app/profile', icon: UserRound },
 ];
@@ -23,5 +30,5 @@ export function isNavigationItemActive(pathname: string, to: string) {
     );
   }
 
-  return pathname === to;
+  return pathname === to || pathname.startsWith(`${to}/`);
 }

@@ -1,5 +1,15 @@
+import type { TemplateExercise } from './template';
+
+export interface SessionTemplate {
+  id: string;
+  name: string;
+  exercises: (TemplateExercise & { isDone: boolean })[];
+}
+
 export interface WorkoutSession {
   id: string;
+  /** The plan the session was started from, with per-exercise progress. */
+  template: SessionTemplate | null;
   startedAt: string;
   endedAt: string | null;
   note: string | null;

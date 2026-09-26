@@ -7,6 +7,7 @@ import { createExerciseLog, exerciseKeys } from '@/api/exercises';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
 import { formatWeight } from '@/lib/format';
+import { plannedSets } from '@/lib/template-form';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
 import type {
   CreatedExerciseLog,
@@ -54,13 +55,26 @@ export function WorkoutEntrySection({
   const [savedLogId, setSavedLogId] = useState<string | null>(null);
   const [record, setRecord] = useState<CreatedExerciseLog['record']>(null);
 
+  // During a template session, an exercise still to do opens with its targets.
+  const plannedRow = activeSession?.template?.exercises.find(
+    (row) =>
+      row.exercise.slug === exerciseSlug &&
+      row.exercise.isCustom === isCustom &&
+      !row.isDone,
+  );
+  const plannedKey = plannedRow
+    ? `${activeSession?.template?.id}:${plannedRow.position}`
+    : null;
+
   useEffect(() => {
     if (!isDirty.current) {
-      editor.reset(recentLog?.sets);
+      editor.reset(
+        plannedRow ? plannedSets(plannedRow, recentLog?.sets) : recentLog?.sets,
+      );
     }
-    // A new recent log should update an untouched entry form.
+    // A new recent log or plan target should update an untouched entry form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recentLog]);
+  }, [recentLog, plannedKey]);
 
   const mutation = useMutation({
     mutationFn: (sets: ExerciseSetInput[]) =>
@@ -116,14 +130,29 @@ export function WorkoutEntrySection({
             Bu kayıt sürmekte olan antrenmanına eklenecek.
           </p>
         ) : null}
-        {recentLog ? (
+        {recentLog || plannedRow ? (
           <div className="mt-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <p>
-              Geçen sefer:{' '}
-              <span className="font-mono tabular-nums text-foreground">
-                {lastWorkoutHint(recentLog)}
-              </span>
-            </p>
+            <div className="space-y-0.5">
+              {plannedRow ? (
+                <p>
+                  Program hedefi:{' '}
+                  <span className="font-mono tabular-nums text-primary">
+                    {plannedRow.targetSets} × {plannedRow.targetReps}
+                    {plannedRow.targetWeightKg
+                      ? ` · ${formatWeight(plannedRow.targetWeightKg)} kg`
+                      : ''}
+                  </span>
+                </p>
+              ) : null}
+              {recentLog ? (
+                <p>
+                  Geçen sefer:{' '}
+                  <span className="font-mono tabular-nums text-foreground">
+                    {lastWorkoutHint(recentLog)}
+                  </span>
+                </p>
+              ) : null}
+            </div>
             <button
               className="min-h-11 rounded-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring"
               disabled={mutation.isPending}

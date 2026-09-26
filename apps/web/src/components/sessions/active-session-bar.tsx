@@ -1,12 +1,15 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, X } from 'lucide-react';
+import { Check, CheckCircle2, ListChecks, X } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
+import { Link } from 'react-router';
 
 import { finishSession, sessionKeys } from '@/api/sessions';
 import { Button } from '@/components/ui/button';
+import { exercisePath } from '@/lib/exercise-path';
 import { formatWeight } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import { formatDuration, formatElapsed } from '@/lib/session-time';
 import type { WorkoutSession } from '@/types/session';
 import { useActiveSession } from './use-active-session';
@@ -46,6 +49,7 @@ export function ActiveSessionBar() {
   const queryClient = useQueryClient();
   const { data: session } = useActiveSession();
   const [isFinishing, setIsFinishing] = useState(false);
+  const [isPlanOpen, setIsPlanOpen] = useState(false);
   const [note, setNote] = useState('');
   const [result, setResult] = useState<FinishResult | null>(null);
   const now = useNow(Boolean(session));
@@ -104,8 +108,21 @@ export function ActiveSessionBar() {
                 className="size-2 shrink-0 rounded-full bg-primary"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground">
-                  Antrenman sürüyor
+                <p className="truncate text-xs text-muted-foreground">
+                  {session.template ? (
+                    <>
+                      {session.template.name}{' '}
+                      <span className="font-mono tabular-nums">
+                        {
+                          session.template.exercises.filter((row) => row.isDone)
+                            .length
+                        }
+                        /{session.template.exercises.length}
+                      </span>
+                    </>
+                  ) : (
+                    'Antrenman sürüyor'
+                  )}
                 </p>
                 <p className="flex items-baseline gap-2">
                   <span className="metric-number text-lg font-semibold text-foreground">
@@ -119,11 +136,23 @@ export function ActiveSessionBar() {
                   </span>
                 </p>
               </div>
+              {session.template && !isFinishing ? (
+                <Button
+                  aria-expanded={isPlanOpen}
+                  aria-label="Program planı"
+                  className="h-11 min-h-11 w-11 px-0"
+                  onClick={() => setIsPlanOpen((current) => !current)}
+                  variant={isPlanOpen ? 'primary' : 'secondary'}
+                >
+                  <ListChecks aria-hidden="true" className="size-4" />
+                </Button>
+              ) : null}
               {!isFinishing ? (
                 <Button
                   className="h-11 min-h-11 px-4"
                   onClick={() => {
                     finishMutation.reset();
+                    setIsPlanOpen(false);
                     setIsFinishing(true);
                   }}
                   variant="secondary"
@@ -132,6 +161,52 @@ export function ActiveSessionBar() {
                 </Button>
               ) : null}
             </div>
+
+            {session.template && isPlanOpen && !isFinishing ? (
+              <ol className="mt-3 max-h-[45svh] divide-y divide-border overflow-y-auto">
+                {session.template.exercises.map((row) => (
+                  <li key={row.position}>
+                    <Link
+                      className="flex min-h-12 items-center gap-3 rounded-sm px-1 outline-none transition-colors hover:bg-surface-strong/60 focus-visible:ring-3 focus-visible:ring-ring"
+                      onClick={() => setIsPlanOpen(false)}
+                      to={exercisePath(row.exercise)}
+                    >
+                      <span
+                        className={cn(
+                          'grid size-6 shrink-0 place-items-center rounded-full border',
+                          row.isDone
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'border-border-strong',
+                        )}
+                      >
+                        {row.isDone ? (
+                          <Check aria-hidden="true" className="size-3.5" />
+                        ) : null}
+                        <span className="sr-only">
+                          {row.isDone ? 'Tamamlandı' : 'Bekliyor'}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 truncate text-sm',
+                          row.isDone
+                            ? 'text-muted-foreground line-through'
+                            : 'font-medium text-foreground',
+                        )}
+                      >
+                        {row.exercise.name}
+                      </span>
+                      <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+                        {row.targetSets} × {row.targetReps}
+                        {row.targetWeightKg
+                          ? ` · ${formatWeight(row.targetWeightKg)} kg`
+                          : ''}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
 
             {isFinishing ? (
               <form className="mt-3" onSubmit={submit}>

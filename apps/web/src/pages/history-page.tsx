@@ -1,9 +1,11 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { AlertTriangle, CalendarDays, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 
 import { getHistory } from '@/api/exercises';
 import { FeedbackPanel } from '@/components/common/feedback-panel';
+import { WorkoutCalendar } from '@/components/history/workout-calendar';
 import { PageHeader } from '@/components/common/page-header';
 import { LogCardActions } from '@/components/workouts/log-card-actions';
 import { Button } from '@/components/ui/button';
@@ -173,6 +175,7 @@ export function HistoryPage() {
   });
   const logs = historyQuery.data?.pages.flatMap((page) => page.items) ?? [];
   const days = groupHistory(logs);
+  const [view, setView] = useState<'list' | 'calendar'>('list');
 
   return (
     <div>
@@ -181,9 +184,42 @@ export function HistoryPage() {
         title="Antrenmanlar"
       />
 
-      {historyQuery.isPending ? <HistoryLoading /> : null}
+      <div
+        aria-label="Görünüm"
+        className="mt-5 inline-grid grid-cols-2 rounded-md bg-surface-strong p-1"
+        role="group"
+      >
+        {(
+          [
+            ['list', 'Liste'],
+            ['calendar', 'Takvim'],
+          ] as const
+        ).map(([value, label]) => (
+          <button
+            aria-pressed={view === value}
+            className={`min-h-10 cursor-pointer rounded-sm px-4 text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring ${
+              view === value
+                ? 'bg-surface font-semibold text-foreground shadow-[0_1px_2px_var(--shadow-tint)]'
+                : 'font-medium text-muted-foreground hover:text-foreground'
+            }`}
+            key={value}
+            onClick={() => setView(value)}
+            type="button"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-      {historyQuery.isError ? (
+      {view === 'calendar' ? (
+        <div className="mt-4 max-w-xl">
+          <WorkoutCalendar />
+        </div>
+      ) : null}
+
+      {view === 'list' && historyQuery.isPending ? <HistoryLoading /> : null}
+
+      {view === 'list' && historyQuery.isError ? (
         <div className="mt-8">
           <FeedbackPanel
             actionLabel="Tekrar dene"
@@ -196,7 +232,7 @@ export function HistoryPage() {
         </div>
       ) : null}
 
-      {historyQuery.isSuccess && logs.length === 0 ? (
+      {view === 'list' && historyQuery.isSuccess && logs.length === 0 ? (
         <div className="mt-8">
           <FeedbackPanel
             description="Bir egzersiz sayfasından ilk antrenmanını kaydettiğinde kayıtların burada görünecek."
@@ -206,7 +242,7 @@ export function HistoryPage() {
         </div>
       ) : null}
 
-      {days.length > 0 ? (
+      {view === 'list' && days.length > 0 ? (
         <div className="mt-8 space-y-7">
           {days.map(({ dateKey, logCount, blocks }) => (
             <section aria-labelledby={`history-date-${dateKey}`} key={dateKey}>

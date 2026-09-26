@@ -10,8 +10,8 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 | 1     | Log corrections            | No            | Done    |
 | 2     | Workout sessions           | Yes           | Done    |
 | 3     | Advanced reports           | No            | Done    |
-| 4     | Programs and templates     | Yes           | Next    |
-| 5     | Profile and account        | Yes           | Planned |
+| 4     | Programs and templates     | Yes           | Finish  |
+| 5     | Profile and account        | Yes           | Next    |
 | 6     | Coach and client mode      | Yes           | Planned |
 | 7     | Offline logging (optional) | No            | Planned |
 
@@ -131,12 +131,37 @@ No schema change.
 - Creating a log returns `record: { weightKg, previousKg } | null`; the entry form celebrates a new record.
 - Reports page: overview tiles, a muscle heat map on the anatomy artwork (with a text list so color is never the only signal), recent records, and an exercise chart that switches between top weight, estimated 1RM (Epley: `weight × (1 + reps / 30)`), and volume. The home page shows the overview tiles.
 
+## Phase 4: Programs and templates (code complete, finish the checklist)
+
+Implemented (migration `20260926173701_add_workout_templates`, applied locally):
+
+- `WorkoutTemplate` (name, `scheduledDays` weekday bitmask Monday = 1 ... Sunday = 64) and `TemplateExercise` (position, target sets, reps, optional kg). Plan rows cascade with their template or exercise; `WorkoutSession.templateId` is `SET NULL`, so deleting a template never touches history.
+- API: `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id` (owner-only, 404 otherwise; exercises must be global or the user's own custom ones), `POST /api/sessions { templateId? }`, session responses include `template` with per-exercise `isDone`, and `GET /api/reports/calendar?month=YYYY-MM&offset=<minutes>`.
+- Web: "Programlar" navigation item, `/app/programs` list (start, edit, delete with inline confirmation), `/app/programs/new` and `/app/programs/:id` editor, plan checklist in the active-session bar, entry form prefilled with the plan target, and a "Liste / Takvim" switch on the history page (trained days filled, planned days outlined, day details with a start button for today).
+- API behavior was verified with scripted requests (ownership 404s, validation 400s, start from template, `isDone`, calendar totals, delete keeps sessions).
+
+Remaining before marking it done:
+
+1. Check the new screens in the browser at 375px and desktop, light and dark: programs list, editor (add, reorder, remove, validation), session bar checklist, template-prefilled entry form, calendar. The bottom navigation now has five items; make sure "Antrenmanlar" fits at 375px.
+2. Update `docs/database.md` (relationship tree, entities, deletion behavior, indexes) for `WorkoutTemplate`, `TemplateExercise`, and `WorkoutSession.templateId`.
+3. Run the full verification and set this phase to Done.
+
+## Phase 5: Profile and account
+
+Decided: deleting an account removes everything (logs, sessions, templates, custom exercises, preferences, measurements, refresh sessions). It requires the current password and typing `hesabımı sil`, and the page offers CSV export first.
+
+- **Change password:** `POST /api/auth/change-password { currentPassword, newPassword }` (argon2 verify, same rules as registration); revoke every other refresh session, keep the current one.
+- **Sign out other devices:** `POST /api/auth/logout-others` revokes all refresh sessions except the one in the request cookie; the profile shows how many other sessions are active.
+- **Delete account:** `DELETE /api/users/me { password, confirmation }` deletes the user's data in one transaction in dependency order (sets via logs, logs, sessions, templates, measurements, preferences, refresh sessions, custom exercises, then the user), clears the refresh cookie, and the web app signs out.
+- **Body measurements:** new `BodyMeasurement` model (user, `measuredAt` date, optional `weightKg` DECIMAL(5,2), `bodyFatPercent` DECIMAL(4,1), `waistCm`, `chestCm`, `armCm` DECIMAL(5,1), note; `onDelete: Restrict` on user like other history) with list/create/delete endpoints; profile section with a form, a body-weight trend chart (reuse the reports chart style), and the latest values.
+- **kg / lb:** `User.weightUnit` (`kg` default, `lb`). Storage stays in kg; convert only for display and input (1 lb = 0.45359237 kg, round stored kg to 2 decimals). Route every weight display and input through `lib/format.ts` so the unit switch is one place.
+- **CSV export:** `GET /api/export/logs.csv` streams all of the user's sets (date, exercise, muscle group, set, weight_kg, reps, session start, session note) with a UTF-8 BOM so Excel shows Turkish characters; the web downloads it with the auth header via a blob URL.
+- Migration, `docs/database.md`, unit tests for conversions, and the usual verification.
+
 ## Later phases (summary)
 
 Detailed specs are written when a phase starts.
 
-- **Phase 4, programs and templates:** `WorkoutTemplate` and `TemplateExercise` models with target sets, reps, and kg; start a session from a template with one tap (depends on phase 2); a calendar of sessions and planned days.
-- **Phase 5, profile and account:** change password; sign out other sessions (refresh-session infrastructure exists); account deletion (needs a separate decision about workout history before implementation); `BodyMeasurement` model with charts; kg/lb display preference (always store kg); CSV export.
 - **Phase 6, coach and client mode:** see the decisions below. `CoachClient` relation created through an invite code or link that the client accepts; the client can remove a coach at any time; coach dashboard with client list, last activity, and progress summary; coaches can assign phase 4 templates. Ownership checks in existing services gain "or a linked coach". Later: coach comments on logs.
 - **Phase 7, offline logging (optional):** queue logs in IndexedDB while offline and send them when the connection returns.
 

@@ -12,8 +12,11 @@ export async function getActiveSession(): Promise<WorkoutSession | null> {
   return response.session;
 }
 
-export function startSession(): Promise<WorkoutSession> {
-  return authorizedRequest('/sessions', { method: 'POST' });
+export function startSession(templateId?: string): Promise<WorkoutSession> {
+  return authorizedRequest('/sessions', {
+    method: 'POST',
+    body: JSON.stringify(templateId ? { templateId } : {}),
+  });
 }
 
 /** Returns null when the session had no logs and was removed. */

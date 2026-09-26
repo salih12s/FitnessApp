@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
 
 export const reportRanges = ['30d', '3m', '6m', 'all'] as const;
 export type ReportRange = (typeof reportRanges)[number];
@@ -18,4 +18,10 @@ export class OverviewQueryDto {
   @Min(-840)
   @Max(840)
   offset: number = 0;
+}
+
+export class CalendarQueryDto extends OverviewQueryDto {
+  /** Calendar month as YYYY-MM in the client's local time. */
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
+  month: string;
 }

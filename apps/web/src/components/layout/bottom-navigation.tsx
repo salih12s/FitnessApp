@@ -15,7 +15,7 @@ export function BottomNavigation() {
       aria-label="Ana navigasyon"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden"
     >
-      <div className="mx-auto grid max-w-lg grid-cols-4 px-1 sm:px-2">
+      <div className="mx-auto grid max-w-lg grid-cols-5 px-1 sm:px-2">
         {navigationItems.map(({ icon: Icon, label, to }) => {
           const isActive = isNavigationItemActive(pathname, to);
 

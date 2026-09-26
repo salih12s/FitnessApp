@@ -13,7 +13,11 @@ import {
 
 import { AccessTokenGuard } from '../auth/access-token.guard.js';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
-import { FinishSessionDto, UpdateSessionDto } from './session.dto.js';
+import {
+  FinishSessionDto,
+  StartSessionDto,
+  UpdateSessionDto,
+} from './session.dto.js';
 import { SessionsService } from './sessions.service.js';
 
 @Controller('sessions')
@@ -22,8 +26,8 @@ export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) {}
 
   @Post()
-  start(@Req() request: AuthenticatedRequest) {
-    return this.sessionsService.start(request.user.sub);
+  start(@Req() request: AuthenticatedRequest, @Body() dto: StartSessionDto) {
+    return this.sessionsService.start(request.user.sub, dto.templateId);
   }
 
   @Get('active')

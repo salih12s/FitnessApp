@@ -2,12 +2,26 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  templateExercisesSelect,
+  type TemplateExerciseResponse,
+  TemplatesService,
+  toTemplateExerciseResponse,
+} from '../templates/templates.service.js';
 
 /** Sessions left active longer than this are finished automatically. */
 export const STALE_SESSION_MS = 6 * 60 * 60 * 1000;
 
+export interface SessionTemplateResponse {
+  id: string;
+  name: string;
+  exercises: (TemplateExerciseResponse & { isDone: boolean })[];
+}
+
 export interface SessionResponse {
   id: string;
+  /** The plan this session was started from, with per-exercise progress. */
+  template: SessionTemplateResponse | null;
   startedAt: string;
   endedAt: string | null;
   note: string | null;
@@ -16,22 +30,31 @@ export interface SessionResponse {
   totalVolumeKg: string;
 }
 
-const sessionSelect = {
-  id: true,
-  startedAt: true,
-  endedAt: true,
-  note: true,
-  exerciseLogs: {
-    select: {
-      exerciseId: true,
-      performedAt: true,
-      exerciseSets: { select: { weightKg: true, reps: true } },
+function sessionSelect(userId: string) {
+  return {
+    id: true,
+    startedAt: true,
+    endedAt: true,
+    note: true,
+    template: {
+      select: {
+        id: true,
+        name: true,
+        exercises: templateExercisesSelect(userId),
+      },
     },
-  },
-} satisfies Prisma.WorkoutSessionSelect;
+    exerciseLogs: {
+      select: {
+        exerciseId: true,
+        performedAt: true,
+        exerciseSets: { select: { weightKg: true, reps: true } },
+      },
+    },
+  } satisfies Prisma.WorkoutSessionSelect;
+}
 
 type SessionRecord = Prisma.WorkoutSessionGetPayload<{
-  select: typeof sessionSelect;
+  select: ReturnType<typeof sessionSelect>;
 }>;
 
 function toSessionResponse(session: SessionRecord): SessionResponse {
@@ -41,13 +64,26 @@ function toSessionResponse(session: SessionRecord): SessionResponse {
     new Prisma.Decimal(0),
   );
 
+  const loggedExercises = new Set(
+    session.exerciseLogs.map((log) => log.exerciseId),
+  );
+
   return {
     id: session.id,
+    template: session.template
+      ? {
+          id: session.template.id,
+          name: session.template.name,
+          exercises: session.template.exercises.map((row) => ({
+            ...toTemplateExerciseResponse(row),
+            isDone: loggedExercises.has(row.exercise.id),
+          })),
+        }
+      : null,
     startedAt: session.startedAt.toISOString(),
     endedAt: session.endedAt?.toISOString() ?? null,
     note: session.note,
-    exerciseCount: new Set(session.exerciseLogs.map((log) => log.exerciseId))
-      .size,
+    exerciseCount: loggedExercises.size,
     setCount: sets.length,
     totalVolumeKg: totalVolume.toString(),
   };
@@ -61,18 +97,33 @@ function normalizeNote(note: string | undefined): string | null | undefined {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly templatesService: TemplatesService,
+  ) {}
 
-  async start(userId: string): Promise<SessionResponse> {
+  /**
+   * Starts a session, optionally from one of the user's templates. An active
+   * session is returned unchanged instead of starting a second one.
+   */
+  async start(userId: string, templateId?: string): Promise<SessionResponse> {
     const session = await this.prisma.client.$transaction(async (db) => {
       // Serializes concurrent starts for one user, so a double tap cannot
       // create two active sessions.
       await db.$queryRaw`SELECT id FROM users WHERE id = ${userId} FOR UPDATE`;
 
-      return (
-        (await this.findActiveRecord(db, userId)) ??
-        db.workoutSession.create({ data: { userId }, select: sessionSelect })
-      );
+      const active = await this.findActiveRecord(db, userId);
+      if (active) return active;
+
+      return db.workoutSession.create({
+        data: {
+          userId,
+          templateId: templateId
+            ? await this.templatesService.findOwnedId(db, userId, templateId)
+            : null,
+        },
+        select: sessionSelect(userId),
+      });
     });
 
     return toSessionResponse(session);
@@ -104,7 +155,7 @@ export class SessionsService {
       return db.workoutSession.update({
         where: { id },
         data: { note: normalizeNote(note) },
-        select: sessionSelect,
+        select: sessionSelect(userId),
       });
     });
 
@@ -135,7 +186,7 @@ export class SessionsService {
           endedAt: existing.endedAt ?? new Date(),
           note: normalizeNote(note),
         },
-        select: sessionSelect,
+        select: sessionSelect(userId),
       });
     });
 
@@ -149,7 +200,7 @@ export class SessionsService {
   ): Promise<SessionRecord> {
     const session = await db.workoutSession.findFirst({
       where: { id, userId },
-      select: sessionSelect,
+      select: sessionSelect(userId),
     });
 
     if (!session) {
@@ -167,7 +218,7 @@ export class SessionsService {
     const session = await db.workoutSession.findFirst({
       where: { userId, endedAt: null },
       orderBy: { startedAt: 'desc' },
-      select: sessionSelect,
+      select: sessionSelect(userId),
     });
 
     if (!session) return null;

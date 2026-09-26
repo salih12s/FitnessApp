@@ -12,16 +12,17 @@ datasource db {
 }
 
 model User {
-  id              String               @id @default(uuid()) @db.Char(36)
-  username        String               @unique
-  passwordHash    String               @map("password_hash")
-  createdAt       DateTime             @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt       DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
-  exercises       Exercise[]           @relation("CustomExerciseOwner")
-  exerciseLogs    ExerciseLog[]
-  exercisePrefs   ExercisePreference[]
-  refreshSessions RefreshSession[]
-  workoutSessions WorkoutSession[]
+  id               String               @id @default(uuid()) @db.Char(36)
+  username         String               @unique
+  passwordHash     String               @map("password_hash")
+  createdAt        DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  exercises        Exercise[]           @relation("CustomExerciseOwner")
+  exerciseLogs     ExerciseLog[]
+  exercisePrefs    ExercisePreference[]
+  refreshSessions  RefreshSession[]
+  workoutSessions  WorkoutSession[]
+  workoutTemplates WorkoutTemplate[]
 
   @@map("users")
 }
@@ -52,22 +53,23 @@ model MuscleGroup {
 }
 
 model Exercise {
-  id              String               @id @default(uuid()) @db.Char(36)
-  name            String
-  slug            String
-  slugNamespace   String               @default("global") @map("slug_namespace")
-  description     String?              @db.Text
-  equipment       String?
-  imageUrl        String?              @map("image_url") @db.VarChar(2048)
-  isCustom        Boolean              @default(false) @map("is_custom")
-  createdByUserId String?              @map("created_by_user_id") @db.Char(36)
-  muscleGroupId   String               @map("muscle_group_id") @db.Char(36)
-  createdAt       DateTime             @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt       DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
-  createdByUser   User?                @relation("CustomExerciseOwner", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  muscleGroup     MuscleGroup          @relation(fields: [muscleGroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  exerciseLogs    ExerciseLog[]
-  preferences     ExercisePreference[]
+  id                String               @id @default(uuid()) @db.Char(36)
+  name              String
+  slug              String
+  slugNamespace     String               @default("global") @map("slug_namespace")
+  description       String?              @db.Text
+  equipment         String?
+  imageUrl          String?              @map("image_url") @db.VarChar(2048)
+  isCustom          Boolean              @default(false) @map("is_custom")
+  createdByUserId   String?              @map("created_by_user_id") @db.Char(36)
+  muscleGroupId     String               @map("muscle_group_id") @db.Char(36)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  createdByUser     User?                @relation("CustomExerciseOwner", fields: [createdByUserId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  muscleGroup       MuscleGroup          @relation(fields: [muscleGroupId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exerciseLogs      ExerciseLog[]
+  preferences       ExercisePreference[]
+  templateExercises TemplateExercise[]
 
   @@unique([slugNamespace, slug])
   @@index([createdByUserId])
@@ -118,18 +120,56 @@ model ExerciseLog {
 /// One visit to the gym. `endedAt` is null while the session is active; a
 /// user has at most one active session (enforced in SessionsService).
 model WorkoutSession {
-  id           String        @id @default(uuid()) @db.Char(36)
-  userId       String        @map("user_id") @db.Char(36)
-  startedAt    DateTime      @default(now()) @map("started_at") @db.DateTime(3)
-  endedAt      DateTime?     @map("ended_at") @db.DateTime(3)
-  note         String?       @db.Text
-  createdAt    DateTime      @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.DateTime(3)
-  user         User          @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id           String           @id @default(uuid()) @db.Char(36)
+  userId       String           @map("user_id") @db.Char(36)
+  templateId   String?          @map("template_id") @db.Char(36)
+  startedAt    DateTime         @default(now()) @map("started_at") @db.DateTime(3)
+  endedAt      DateTime?        @map("ended_at") @db.DateTime(3)
+  note         String?          @db.Text
+  createdAt    DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  template     WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   exerciseLogs ExerciseLog[]
 
   @@index([userId, startedAt(sort: Desc)])
+  @@index([templateId])
   @@map("workout_sessions")
+}
+
+/// A reusable workout plan. `scheduledDays` is a weekday bitmask
+/// (Monday = 1, Tuesday = 2, ... Sunday = 64) used by the calendar.
+model WorkoutTemplate {
+  id            String             @id @default(uuid()) @db.Char(36)
+  userId        String             @map("user_id") @db.Char(36)
+  name          String             @db.VarChar(80)
+  scheduledDays Int                @default(0) @map("scheduled_days")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  user          User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exercises     TemplateExercise[]
+  sessions      WorkoutSession[]
+
+  @@index([userId])
+  @@map("workout_templates")
+}
+
+/// One planned exercise in a template with its targets. Plan rows are not
+/// history, so they go with their template or exercise.
+model TemplateExercise {
+  id             String          @id @default(uuid()) @db.Char(36)
+  templateId     String          @map("template_id") @db.Char(36)
+  exerciseId     String          @map("exercise_id") @db.Char(36)
+  position       Int
+  targetSets     Int             @map("target_sets")
+  targetReps     Int             @map("target_reps")
+  targetWeightKg Decimal?        @map("target_weight_kg") @db.Decimal(6, 2)
+  template       WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  exercise       Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([templateId, position])
+  @@index([exerciseId])
+  @@map("template_exercises")
 }
 
 model ExerciseSet {

@@ -316,4 +316,50 @@ export class ReportsService {
       recentRecords: records.slice(-5).reverse(),
     };
   }
+
+  /** Per-day activity for one local calendar month. */
+  async findCalendar(userId: string, month: string, offsetMinutes: number) {
+    const [year, monthNumber] = month.split('-').map(Number);
+    const offsetMs = offsetMinutes * 60_000;
+    const from = new Date(Date.UTC(year, monthNumber - 1, 1) - offsetMs);
+    const to = new Date(Date.UTC(year, monthNumber, 1) - offsetMs);
+
+    const logs = await this.prisma.client.exerciseLog.findMany({
+      where: { userId, performedAt: { gte: from, lt: to } },
+      select: {
+        performedAt: true,
+        sessionId: true,
+        exerciseSets: { select: { weightKg: true, reps: true } },
+      },
+    });
+
+    const days = new Map<
+      string,
+      { logCount: number; sessions: Set<string>; volume: bigint }
+    >();
+    for (const log of logs) {
+      const date = localDayKey(log.performedAt.getTime(), offsetMinutes);
+      const day = days.get(date) ?? {
+        logCount: 0,
+        sessions: new Set<string>(),
+        volume: 0n,
+      };
+      day.logCount += 1;
+      if (log.sessionId) day.sessions.add(log.sessionId);
+      day.volume += volumeCents(log.exerciseSets);
+      days.set(date, day);
+    }
+
+    return {
+      month,
+      days: [...days.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([date, day]) => ({
+          date,
+          logCount: day.logCount,
+          sessionCount: day.sessions.size,
+          volumeKg: formatCents(day.volume),
+        })),
+    };
+  }
 }

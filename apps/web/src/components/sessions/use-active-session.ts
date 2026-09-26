@@ -14,9 +14,11 @@ export function useStartSession() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: startSession,
-    onSuccess: (session) => {
+    mutationFn: (templateId?: string) => startSession(templateId),
+    onSuccess: async (session) => {
       queryClient.setQueryData(sessionKeys.active, session);
+      // Templates show when they were last used.
+      await queryClient.invalidateQueries({ queryKey: ['templates'] });
     },
   });
 }

@@ -10,6 +10,8 @@ import { LoginPage } from '@/pages/login-page';
 import { MuscleGroupPage } from '@/pages/muscle-group-page';
 import { MuscleGroupsPage } from '@/pages/muscle-groups-page';
 import { ProfilePage } from '@/pages/profile-page';
+import { ProgramEditorPage } from '@/pages/program-editor-page';
+import { ProgramsPage } from '@/pages/programs-page';
 import { RegisterPage } from '@/pages/register-page';
 import { ReportsPage } from '@/pages/reports-page';
 
@@ -25,6 +27,9 @@ function App() {
         <Route path="/app" element={<AppShell />}>
           <Route index element={<MuscleGroupsPage />} />
           <Route path="history" element={<HistoryPage />} />
+          <Route path="programs" element={<ProgramsPage />} />
+          <Route path="programs/new" element={<ProgramEditorPage />} />
+          <Route path="programs/:id" element={<ProgramEditorPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="muscles/:slug" element={<MuscleGroupPage />} />

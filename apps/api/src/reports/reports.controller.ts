@@ -2,7 +2,11 @@ import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
 
 import { AccessTokenGuard } from '../auth/access-token.guard.js';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
-import { OverviewQueryDto, ReportQueryDto } from './reports.dto.js';
+import {
+  CalendarQueryDto,
+  OverviewQueryDto,
+  ReportQueryDto,
+} from './reports.dto.js';
 import { ReportsService } from './reports.service.js';
 
 @Controller('reports')
@@ -16,6 +20,18 @@ export class ReportsController {
     @Query() query: OverviewQueryDto,
   ) {
     return this.reportsService.findOverview(request.user.sub, query.offset);
+  }
+
+  @Get('calendar')
+  findCalendar(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: CalendarQueryDto,
+  ) {
+    return this.reportsService.findCalendar(
+      request.user.sub,
+      query.month,
+      query.offset,
+    );
   }
 
   @Get('exercises')
