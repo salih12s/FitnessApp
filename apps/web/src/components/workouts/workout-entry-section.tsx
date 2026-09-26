@@ -5,6 +5,7 @@ import { CheckCircle2, Save } from 'lucide-react';
 import { createExerciseLog, exerciseKeys } from '@/api/exercises';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
+import { formatWeight } from '@/lib/format';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
 import type { ExerciseLog, ExerciseSetInput } from '@/types/exercise';
 import { RestTimer } from './rest-timer';
@@ -27,9 +28,11 @@ function getSaveErrorMessage(error: unknown): string {
 function lastWorkoutHint(log: ExerciseLog): string {
   const firstWeight = log.sets[0]?.weightKg;
   if (log.sets.every((set) => set.weightKg === firstWeight)) {
-    return `${firstWeight} kg × ${log.sets.map((set) => set.reps).join(', ')}`;
+    return `${formatWeight(firstWeight)} kg × ${log.sets.map((set) => set.reps).join(', ')}`;
   }
-  return log.sets.map((set) => `${set.weightKg} kg × ${set.reps}`).join(' · ');
+  return log.sets
+    .map((set) => `${formatWeight(set.weightKg)} kg × ${set.reps}`)
+    .join(' · ');
 }
 
 export function WorkoutEntrySection({

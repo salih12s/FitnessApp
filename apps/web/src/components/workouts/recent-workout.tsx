@@ -1,6 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 
 import { FeedbackPanel } from '@/components/common/feedback-panel';
+import { formatWeight } from '@/lib/format';
 import type { ExerciseLog } from '@/types/exercise';
 import { LogCardActions } from './log-card-actions';
 
@@ -70,35 +71,35 @@ export function RecentWorkout({
       </div>
 
       {recentLog ? (
-        <>
-          <ol className="mt-3 divide-y divide-border">
-            {recentLog.sets.map((set) => (
-              <li
-                className="flex min-h-11 items-center justify-between gap-4 py-2 text-sm"
-                key={set.setNumber}
-              >
-                <span className="text-muted-foreground">
-                  Set {set.setNumber}
-                </span>
-                <span className="metric-number text-sm text-muted-foreground">
-                  <span className="font-semibold text-foreground">
-                    {set.weightKg}
-                  </span>{' '}
-                  kg ×{' '}
-                  <span className="font-semibold text-foreground">
-                    {set.reps}
+        <LogCardActions
+          exerciseSlug={exerciseSlug}
+          isCustom={isCustom}
+          key={recentLog.id}
+          log={recentLog}
+          summary={
+            <ol className="mt-3 divide-y divide-border">
+              {recentLog.sets.map((set) => (
+                <li
+                  className="flex min-h-11 items-center justify-between gap-4 py-2 text-sm"
+                  key={set.setNumber}
+                >
+                  <span className="text-muted-foreground">
+                    Set {set.setNumber}
                   </span>
-                </span>
-              </li>
-            ))}
-          </ol>
-          <LogCardActions
-            key={recentLog.id}
-            log={recentLog}
-            exerciseSlug={exerciseSlug}
-            isCustom={isCustom}
-          />
-        </>
+                  <span className="metric-number text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">
+                      {formatWeight(set.weightKg)}
+                    </span>{' '}
+                    kg ×{' '}
+                    <span className="font-semibold text-foreground">
+                      {set.reps}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          }
+        />
       ) : (
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           Bu hareket için henüz kaydedilmiş bir antrenmanın yok.

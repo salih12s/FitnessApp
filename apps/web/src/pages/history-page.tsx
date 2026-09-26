@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { LogCardActions } from '@/components/workouts/log-card-actions';
 import { Button } from '@/components/ui/button';
 import { exercisePath } from '@/lib/exercise-path';
+import { formatWeight } from '@/lib/format';
 import type { HistoryLog } from '@/types/history';
 
 const historyKeys = {
@@ -90,7 +91,7 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
         </Link>
         <p className="shrink-0 text-right">
           <span className="metric-number block text-lg font-semibold leading-none text-foreground">
-            {topWeight}
+            {formatWeight(topWeight)}
             <span className="ml-0.5 text-xs font-normal text-muted-foreground">
               kg
             </span>
@@ -100,25 +101,32 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
           </span>
         </p>
       </div>
-      <ol className="mt-3 flex flex-wrap gap-1.5">
-        {log.sets.map((set) => (
-          <li
-            className="metric-number rounded-sm bg-surface-strong px-2 py-1 text-xs text-muted-foreground"
-            key={set.setNumber}
-          >
-            <span className="font-semibold text-foreground">
-              {set.weightKg}
-            </span>
-            {' × '}
-            <span className="font-semibold text-foreground">{set.reps}</span>
-          </li>
-        ))}
-      </ol>
-      <LogCardActions
-        exerciseSlug={log.exercise.slug}
-        isCustom={log.exercise.isCustom}
-        log={log}
-      />
+      <div className="mt-3">
+        <LogCardActions
+          exerciseSlug={log.exercise.slug}
+          isCustom={log.exercise.isCustom}
+          log={log}
+          summary={
+            <ol className="flex flex-wrap gap-1.5">
+              {log.sets.map((set) => (
+                <li
+                  className="metric-number rounded-sm bg-surface-strong px-2 py-1 text-xs text-muted-foreground"
+                  key={set.setNumber}
+                >
+                  <span className="font-semibold text-foreground">
+                    {formatWeight(set.weightKg)}
+                  </span>
+                  {' × '}
+                  <span className="font-semibold text-foreground">
+                    {set.reps}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          }
+          variant="menu"
+        />
+      </div>
     </article>
   );
 }

@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { RecentWorkout } from '@/components/workouts/recent-workout';
 import { WorkoutEntrySection } from '@/components/workouts/workout-entry-section';
 import { ApiError } from '@/lib/api';
+import { formatWeight } from '@/lib/format';
 
 interface ExercisePageProps {
   isCustom?: boolean;
@@ -134,7 +135,7 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
               <div className="rounded-lg border border-border bg-surface p-4">
                 <dt className="text-xs text-muted-foreground">Son ağırlık</dt>
                 <dd className="metric-number mt-1 text-2xl font-semibold text-foreground">
-                  {summary ? summary.currentWeightKg : '-'}
+                  {summary ? formatWeight(summary.currentWeightKg) : '-'}
                   {summary ? (
                     <span className="ml-1 text-sm font-normal text-muted-foreground">
                       kg
@@ -151,7 +152,7 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
                   Kişisel rekor
                 </dt>
                 <dd className="metric-number mt-1 text-2xl font-semibold text-primary">
-                  {summary ? summary.personalRecordKg : '-'}
+                  {summary ? formatWeight(summary.personalRecordKg) : '-'}
                   {summary ? (
                     <span className="ml-1 text-sm font-normal">kg</span>
                   ) : null}

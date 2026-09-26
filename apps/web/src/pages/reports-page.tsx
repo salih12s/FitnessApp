@@ -20,6 +20,7 @@ import {
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import { PageHeader } from '@/components/common/page-header';
 import { toChartPoints, type ChartPoint } from '@/lib/report-series';
+import { formatWeight, formatWeightChange } from '@/lib/format';
 import type { ReportRange } from '@/types/report';
 
 const dateFormatter = new Intl.DateTimeFormat('tr-TR', {
@@ -48,12 +49,12 @@ function ProgressTooltip({
         {dateFormatter.format(new Date(point.performedAt))}
       </p>
       <p className="metric-number mt-0.5 text-lg font-semibold text-foreground">
-        {point.maxWeightKg} kg
+        {formatWeight(point.maxWeightKg)} kg
       </p>
       <ul className="metric-number mt-2 space-y-0.5 border-t border-border pt-2 text-xs text-muted-foreground">
         {point.sets.map((set) => (
           <li key={set.id}>
-            {set.weightKg} kg × {set.reps}
+            {formatWeight(set.weightKg)} kg × {set.reps}
           </li>
         ))}
       </ul>
@@ -145,9 +146,8 @@ export function ReportsPage() {
     shortDateFormatter.format(date),
   );
   const summary = reportQuery.data?.summary;
-  const increaseValue = summary?.increaseKg;
-  const formattedIncrease = increaseValue
-    ? `${increaseValue === '0' || increaseValue.startsWith('-') ? '' : '+'}${increaseValue} kg`
+  const formattedIncrease = summary
+    ? `${formatWeightChange(summary.increaseKg)} kg`
     : '';
 
   return (
@@ -257,18 +257,18 @@ export function ReportsPage() {
                 <MetricCard
                   index={0}
                   label="Başlangıç"
-                  value={`${summary.startingWeightKg} kg`}
+                  value={`${formatWeight(summary.startingWeightKg)} kg`}
                 />
                 <MetricCard
                   index={1}
                   label="Güncel"
-                  value={`${summary.currentWeightKg} kg`}
+                  value={`${formatWeight(summary.currentWeightKg)} kg`}
                 />
                 <MetricCard
                   accent
                   index={2}
                   label="Kişisel rekor"
-                  value={`${summary.personalRecordKg} kg`}
+                  value={`${formatWeight(summary.personalRecordKg)} kg`}
                 />
                 <MetricCard
                   index={3}
@@ -348,6 +348,7 @@ export function ReportsPage() {
                         axisLine={false}
                         domain={['auto', 'auto']}
                         tick={chartTick}
+                        tickFormatter={(value: number) => formatWeight(value)}
                         tickLine={false}
                         width={48}
                       />

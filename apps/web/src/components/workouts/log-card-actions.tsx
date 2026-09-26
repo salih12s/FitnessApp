@@ -1,6 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Pencil, Trash2, X } from 'lucide-react';
+import { Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
 
 import { deleteExerciseLog, updateExerciseLog } from '@/api/exercises';
 import { Button } from '@/components/ui/button';
@@ -15,16 +15,26 @@ interface LogCardActionsProps {
   log: ExerciseLog;
   exerciseSlug: string;
   isCustom: boolean;
+  /** Read-only view of the sets; hidden while the sets are being edited. */
+  summary: ReactNode;
+  /**
+   * `menu` tucks the actions behind a "⋯" toggle for long lists; `inline`
+   * shows them as buttons under the summary.
+   */
+  variant?: 'inline' | 'menu';
 }
 
 export function LogCardActions({
   log,
   exerciseSlug,
   isCustom,
+  summary,
+  variant = 'inline',
 }: LogCardActionsProps) {
   const queryClient = useQueryClient();
   const editor = useWorkoutSets(log.sets);
   const [mode, setMode] = useState<Mode>('idle');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const refresh = () =>
     invalidateWorkoutQueries(queryClient, exerciseSlug, isCustom);
   const updateMutation = useMutation({
@@ -47,6 +57,7 @@ export function LogCardActions({
     editor.reset(log.sets);
     updateMutation.reset();
     deleteMutation.reset();
+    setIsMenuOpen(false);
     setMode(nextMode);
   }
 
@@ -56,27 +67,52 @@ export function LogCardActions({
     if (sets) updateMutation.mutate(sets);
   }
 
+  const actionButtons = (
+    <div className="flex flex-wrap gap-2">
+      <Button onClick={() => open('edit')} variant="secondary">
+        <Pencil aria-hidden="true" className="size-4" />
+        Düzenle
+      </Button>
+      <Button
+        className="text-destructive hover:border-destructive/40"
+        onClick={() => open('delete')}
+        variant="secondary"
+      >
+        <Trash2 aria-hidden="true" className="size-4" />
+        Sil
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="mt-4 border-t border-border pt-3">
-      {mode === 'idle' ? (
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => open('edit')} variant="secondary">
-            <Pencil aria-hidden="true" className="size-4" />
-            Düzenle
-          </Button>
+    <div>
+      {mode !== 'edit' && variant === 'menu' ? (
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">{summary}</div>
           <Button
-            className="text-destructive hover:border-destructive/40"
-            onClick={() => open('delete')}
-            variant="secondary"
+            aria-expanded={isMenuOpen}
+            aria-label="Kayıt işlemleri"
+            className="-mr-2 -mt-1.5 size-11 min-h-11 text-muted-foreground"
+            disabled={mode === 'delete'}
+            onClick={() => setIsMenuOpen((current) => !current)}
+            size="icon"
+            variant="ghost"
           >
-            <Trash2 aria-hidden="true" className="size-4" />
-            Sil
+            <MoreHorizontal aria-hidden="true" className="size-5" />
           </Button>
         </div>
       ) : null}
+      {mode !== 'edit' && variant === 'inline' ? summary : null}
+
+      {mode === 'idle' && variant === 'menu' && isMenuOpen ? (
+        <div className="mt-3">{actionButtons}</div>
+      ) : null}
+      {mode === 'idle' && variant === 'inline' ? (
+        <div className="mt-4 border-t border-border pt-3">{actionButtons}</div>
+      ) : null}
 
       {mode === 'edit' ? (
-        <form noValidate onSubmit={submitUpdate}>
+        <form className="mt-3" noValidate onSubmit={submitUpdate}>
           <p className="mb-3 text-sm font-semibold text-foreground">
             Setleri düzenle
           </p>
@@ -111,7 +147,7 @@ export function LogCardActions({
       {mode === 'delete' ? (
         <div
           aria-live="polite"
-          className="rounded-md border border-destructive/30 bg-destructive/8 p-3"
+          className="mt-3 rounded-md border border-destructive/30 bg-destructive/8 p-3"
         >
           <p className="text-sm font-semibold text-foreground">
             Bu antrenman kaydı silinsin mi?
