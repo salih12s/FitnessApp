@@ -1,5 +1,9 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 
@@ -50,6 +54,8 @@ export class AuthService {
     return this.createSession({
       id: user.id,
       username: user.username,
+      weightUnit: user.weightUnit,
+      isCoach: user.isCoach,
       createdAt: user.createdAt,
     });
   }
@@ -65,6 +71,8 @@ export class AuthService {
           select: {
             id: true,
             username: true,
+            weightUnit: true,
+            isCoach: true,
             createdAt: true,
           },
         },
@@ -119,6 +127,56 @@ export class AuthService {
     }
 
     return user;
+  }
+
+  async otherSessionCount(
+    userId: string,
+    refreshToken?: string,
+  ): Promise<number> {
+    const current = await this.requireCurrentSession(userId, refreshToken);
+    return this.prisma.client.refreshSession.count({
+      where: {
+        userId,
+        id: { not: current.id },
+        expiresAt: { gt: new Date() },
+      },
+    });
+  }
+
+  async logoutOthers(userId: string, refreshToken?: string): Promise<void> {
+    const current = await this.requireCurrentSession(userId, refreshToken);
+    await this.prisma.client.refreshSession.deleteMany({
+      where: { userId, id: { not: current.id } },
+    });
+  }
+
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+    refreshToken?: string,
+  ): Promise<void> {
+    const current = await this.requireCurrentSession(userId, refreshToken);
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: { passwordHash: true },
+    });
+    if (!user || !(await argon2.verify(user.passwordHash, currentPassword))) {
+      throw new ForbiddenException('Current password is incorrect.');
+    }
+
+    const passwordHash = await argon2.hash(newPassword, {
+      type: argon2.argon2id,
+    });
+    await this.prisma.client.$transaction(async (transaction) => {
+      await transaction.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+      await transaction.refreshSession.deleteMany({
+        where: { userId, id: { not: current.id } },
+      });
+    });
   }
 
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
@@ -181,6 +239,24 @@ export class AuthService {
 
   private hashRefreshToken(refreshToken: string): string {
     return createHash('sha256').update(refreshToken).digest('hex');
+  }
+
+  private async requireCurrentSession(userId: string, refreshToken?: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('A current refresh session is required.');
+    }
+    const session = await this.prisma.client.refreshSession.findUnique({
+      where: { tokenHash: this.hashRefreshToken(refreshToken) },
+      select: { id: true, userId: true, expiresAt: true },
+    });
+    if (
+      !session ||
+      session.userId !== userId ||
+      session.expiresAt <= new Date()
+    ) {
+      throw new UnauthorizedException('A current refresh session is required.');
+    }
+    return session;
   }
 
   private normalizeUsername(username: string): string {

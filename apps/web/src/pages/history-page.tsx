@@ -9,8 +9,13 @@ import { WorkoutCalendar } from '@/components/history/workout-calendar';
 import { PageHeader } from '@/components/common/page-header';
 import { LogCardActions } from '@/components/workouts/log-card-actions';
 import { Button } from '@/components/ui/button';
+import { useClientScope, useScopedAppPath } from '@/lib/client-scope';
 import { exercisePath } from '@/lib/exercise-path';
-import { formatWeight } from '@/lib/format';
+import {
+  formatWeight,
+  formatWeightWithUnit,
+  getWeightUnit,
+} from '@/lib/format';
 import { groupHistory, totalVolumeKg } from '@/lib/history-groups';
 import { formatClock, formatDuration } from '@/lib/session-time';
 import type { HistoryLog } from '@/types/history';
@@ -78,7 +83,7 @@ function SessionBlock({
               </span>
             )}
             {' · '}
-            {logs.length} hareket · {formatWeight(volume)} kg
+            {logs.length} hareket · {formatWeightWithUnit(volume)}
           </p>
         </div>
         {session.note ? (
@@ -97,6 +102,7 @@ function SessionBlock({
 }
 
 function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
+  const appPath = useScopedAppPath();
   const topWeight = log.sets.reduce(
     (maximum, set) => Math.max(maximum, Number(set.weightKg)),
     0,
@@ -110,7 +116,7 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
       <div className="flex items-start justify-between gap-3">
         <Link
           className="group min-w-0 rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring"
-          to={exercisePath(log.exercise)}
+          to={appPath(exercisePath(log.exercise))}
         >
           <span className="block break-words text-[0.9375rem] font-semibold text-foreground transition-colors group-hover:text-primary">
             {log.exercise.name}
@@ -126,7 +132,7 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
           <span className="metric-number block text-lg font-semibold leading-none text-foreground">
             {formatWeight(topWeight)}
             <span className="ml-0.5 text-xs font-normal text-muted-foreground">
-              kg
+              {getWeightUnit()}
             </span>
           </span>
           <span className="mt-1 block text-[0.6875rem] text-muted-foreground">
@@ -165,9 +171,11 @@ function HistoryLogCard({ log, index }: { log: HistoryLog; index: number }) {
 }
 
 export function HistoryPage() {
+  const scope = useClientScope();
   const historyQuery = useInfiniteQuery({
     queryKey: historyKeys.all,
-    queryFn: ({ pageParam }) => getHistory({ page: pageParam, limit: 20 }),
+    queryFn: ({ pageParam }) =>
+      getHistory({ page: pageParam, limit: 20 }, scope?.clientId),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.hasNextPage ? lastPage.page + 1 : undefined,
@@ -179,14 +187,18 @@ export function HistoryPage() {
 
   return (
     <div>
-      <PageHeader
-        description="Kaydettiğin setleri tarihe göre incele ve hareket detaylarına geri dön."
-        title="Antrenmanlar"
-      />
+      {scope ? null : (
+        <PageHeader
+          description="Kaydettiğin setleri tarihe göre incele ve hareket detaylarına geri dön."
+          title="Antrenmanlar"
+        />
+      )}
 
+      {/* The calendar shows the signed-in user's own programs. */}
       <div
         aria-label="Görünüm"
         className="mt-5 inline-grid grid-cols-2 rounded-md bg-surface-strong p-1"
+        hidden={Boolean(scope)}
         role="group"
       >
         {(
@@ -235,7 +247,11 @@ export function HistoryPage() {
       {view === 'list' && historyQuery.isSuccess && logs.length === 0 ? (
         <div className="mt-8">
           <FeedbackPanel
-            description="Bir egzersiz sayfasından ilk antrenmanını kaydettiğinde kayıtların burada görünecek."
+            description={
+              scope
+                ? `${scope.username} henüz antrenman kaydetmedi. "Antrenman gir" sekmesinden onun adına kayıt ekleyebilirsin.`
+                : 'Bir egzersiz sayfasından ilk antrenmanını kaydettiğinde kayıtların burada görünecek.'
+            }
             icon={CalendarDays}
             title="Henüz kayıtlı antrenman yok"
           />

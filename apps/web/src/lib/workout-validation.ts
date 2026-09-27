@@ -1,10 +1,13 @@
+import { getWeightUnit } from './format';
+
+/** A set as typed: the weight is in the user's display unit. */
 export interface WorkoutSetDraft {
-  weightKg: string;
+  weight: string;
   reps: string;
 }
 
 export interface WorkoutSetErrors {
-  weightKg?: string;
+  weight?: string;
   reps?: string;
 }
 
@@ -13,8 +16,8 @@ const weightPattern = /^(?:0|[1-9]\d{0,3})(?:\.\d{1,2})?$/;
 export function validateWorkoutSet(set: WorkoutSetDraft): WorkoutSetErrors {
   const errors: WorkoutSetErrors = {};
 
-  if (!weightPattern.test(set.weightKg.trim())) {
-    errors.weightKg = '0 ile 9999,99 kg arasında bir değer gir.';
+  if (!weightPattern.test(set.weight.trim())) {
+    errors.weight = `0 ile 9999,99 ${getWeightUnit()} arasında bir değer gir.`;
   }
 
   const reps = Number(set.reps);

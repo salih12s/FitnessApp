@@ -18,14 +18,21 @@ import {
   getReportOverview,
   reportKeys,
 } from '@/api/reports';
+import { chartTick, yAxisWidth } from '@/components/common/chart-style';
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import { SectionHeading } from '@/components/common/section-heading';
 import { MuscleHeatmap } from '@/components/reports/muscle-heatmap';
 import { OverviewStats } from '@/components/reports/overview-stats';
 import { RecentRecords } from '@/components/reports/recent-records';
 import { PageHeader } from '@/components/common/page-header';
+import { useClientScope } from '@/lib/client-scope';
 import { toChartPoints, type ChartPoint } from '@/lib/report-series';
-import { formatWeight, formatWeightChange } from '@/lib/format';
+import {
+  formatDisplayWeight,
+  formatWeightChange,
+  formatWeightWithUnit,
+  getWeightUnit,
+} from '@/lib/format';
 import type { ReportRange } from '@/types/report';
 
 const dateFormatter = new Intl.DateTimeFormat('tr-TR', {
@@ -54,16 +61,16 @@ function ProgressTooltip({
         {dateFormatter.format(new Date(point.performedAt))}
       </p>
       <p className="metric-number mt-0.5 text-lg font-semibold text-foreground">
-        {formatWeight(point.maxWeightKg)} kg
+        {formatWeightWithUnit(point.maxWeightKg)}
       </p>
       <p className="metric-number text-xs text-muted-foreground">
-        1RM {formatWeight(point.oneRepMax)} kg · hacim{' '}
-        {formatWeight(point.volume)} kg
+        1RM {formatDisplayWeight(point.oneRepMax)} {getWeightUnit()} · hacim{' '}
+        {formatDisplayWeight(point.volume)} {getWeightUnit()}
       </p>
       <ul className="metric-number mt-2 space-y-0.5 border-t border-border pt-2 text-xs text-muted-foreground">
         {point.sets.map((set) => (
           <li key={set.id}>
-            {formatWeight(set.weightKg)} kg × {set.reps}
+            {formatWeightWithUnit(set.weightKg)} × {set.reps}
           </li>
         ))}
       </ul>
@@ -93,12 +100,6 @@ const chartMetrics: readonly [ChartMetric, string, string, string][] = [
     'Her antrenmandaki setlerin ağırlık × tekrar toplamı.',
   ],
 ];
-
-const chartTick = {
-  fill: 'var(--text-secondary)',
-  fontFamily: 'var(--font-mono)',
-  fontSize: 11,
-};
 
 function ReportsLoading() {
   return (
@@ -146,17 +147,19 @@ function MetricCard({
 }
 
 export function ReportsPage() {
+  const scope = useClientScope();
+  const clientId = scope?.clientId;
   const [selectedExerciseId, setSelectedExerciseId] = useState('');
   const [range, setRange] = useState<ReportRange>('all');
   const [metric, setMetric] = useState<ChartMetric>('maxWeightNumber');
   const overviewQuery = useQuery({
     queryKey: reportKeys.overview,
-    queryFn: getReportOverview,
+    queryFn: () => getReportOverview(clientId),
     retry: 1,
   });
   const exercisesQuery = useQuery({
     queryKey: reportKeys.exercises,
-    queryFn: getReportExercises,
+    queryFn: () => getReportExercises(clientId),
     retry: 1,
   });
 
@@ -176,6 +179,7 @@ export function ReportsPage() {
         activeExercise?.slug ?? '',
         activeExercise?.isCustom ?? false,
         range,
+        clientId,
       ),
     enabled: Boolean(activeExercise),
     retry: 1,
@@ -191,15 +195,17 @@ export function ReportsPage() {
     ...chartData.map((point) => point.oneRepMax),
   );
   const formattedIncrease = summary
-    ? `${formatWeightChange(summary.increaseKg)} kg`
+    ? `${formatWeightChange(summary.increaseKg)} ${getWeightUnit()}`
     : '';
 
   return (
     <div>
-      <PageHeader
-        description="Çalışma ağırlığının zaman içindeki değişimini, rekorlarını ve toplam gelişimini incele."
-        title="Raporlar"
-      />
+      {scope ? null : (
+        <PageHeader
+          description="Çalışma ağırlığının zaman içindeki değişimini, rekorlarını ve toplam gelişimini incele."
+          title="Raporlar"
+        />
+      )}
 
       {exercisesQuery.isPending ? <ReportsLoading /> : null}
       {exercisesQuery.isError ? (
@@ -369,18 +375,18 @@ export function ReportsPage() {
                 <MetricCard
                   index={0}
                   label="Güncel"
-                  value={`${formatWeight(summary.currentWeightKg)} kg`}
+                  value={`${formatWeightWithUnit(summary.currentWeightKg)}`}
                 />
                 <MetricCard
                   accent
                   index={1}
                   label="Kişisel rekor"
-                  value={`${formatWeight(summary.personalRecordKg)} kg`}
+                  value={`${formatWeightWithUnit(summary.personalRecordKg)}`}
                 />
                 <MetricCard
                   index={2}
                   label="Tahmini 1RM"
-                  value={`${formatWeight(bestOneRepMaxInRange)} kg`}
+                  value={`${formatDisplayWeight(bestOneRepMaxInRange)} ${getWeightUnit()}`}
                 />
                 <MetricCard
                   index={3}
@@ -457,7 +463,7 @@ export function ReportsPage() {
                   <ResponsiveContainer height="100%" width="100%">
                     <AreaChart
                       data={chartData}
-                      margin={{ top: 12, right: 20, left: -20, bottom: 0 }}
+                      margin={{ top: 12, right: 20, left: 0, bottom: 0 }}
                     >
                       <defs>
                         <linearGradient
@@ -492,12 +498,17 @@ export function ReportsPage() {
                         tickLine={false}
                       />
                       <YAxis
+                        allowDecimals={false}
                         axisLine={false}
                         domain={['auto', 'auto']}
                         tick={chartTick}
-                        tickFormatter={(value: number) => formatWeight(value)}
+                        tickFormatter={(value: number) =>
+                          formatDisplayWeight(value)
+                        }
                         tickLine={false}
-                        width={48}
+                        width={yAxisWidth(
+                          chartData.map((point) => point[metric]),
+                        )}
                       />
                       <Tooltip
                         content={<ProgressTooltip />}

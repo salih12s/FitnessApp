@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router';
 
 import { getAuthErrorMessage } from '@/auth/auth-api';
+import { postAuthDestination } from '@/auth/route-access';
 import { useAuth } from '@/auth/use-auth';
 import { PasswordField, UsernameField } from '@/components/auth/auth-fields';
 import { AuthLayout } from '@/components/auth/auth-layout';
@@ -27,13 +28,7 @@ export function LoginPage() {
 
     try {
       await login({ username, password });
-      const locationState = location.state as { from?: unknown } | null;
-      const destination =
-        typeof locationState?.from === 'string' &&
-        locationState.from.startsWith('/app')
-          ? locationState.from
-          : '/app';
-      navigate(destination, { replace: true });
+      navigate(postAuthDestination(location.state), { replace: true });
     } catch (submitError: unknown) {
       setError(getAuthErrorMessage(submitError));
     } finally {
@@ -80,6 +75,7 @@ export function LoginPage() {
         Hesabın yok mu?{' '}
         <Link
           className="inline-flex min-h-11 items-center rounded-sm px-1 font-semibold text-foreground underline decoration-border-strong underline-offset-4 outline-none transition-colors hover:decoration-primary focus-visible:ring-3 focus-visible:ring-ring"
+          state={location.state}
           to="/register"
         >
           Kayıt ol

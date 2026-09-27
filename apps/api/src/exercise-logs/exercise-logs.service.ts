@@ -22,6 +22,8 @@ export interface ExerciseLogResponse {
   id: string;
   performedAt: string;
   sets: ExerciseLogSetResponse[];
+  /** The coach who entered the log for the user; null for own logs. */
+  enteredBy: { id: string; username: string } | null;
 }
 
 export interface PersonalRecordResponse {
@@ -63,6 +65,8 @@ export interface HistoryResponse {
   hasNextPage: boolean;
 }
 
+const enteredBySelect = { select: { id: true, username: true } } as const;
+
 const exerciseLogSelect = {
   id: true,
   performedAt: true,
@@ -74,6 +78,7 @@ const exerciseLogSelect = {
       reps: true,
     },
   },
+  enteredBy: enteredBySelect,
 } as const;
 
 const historyLogSelect = (userId: string) =>
@@ -100,6 +105,7 @@ const historyLogSelect = (userId: string) =>
     session: {
       select: { id: true, startedAt: true, endedAt: true, note: true },
     },
+    enteredBy: enteredBySelect,
   }) as const;
 
 @Injectable()
@@ -109,20 +115,35 @@ export class ExerciseLogsService {
     private readonly sessionsService: SessionsService,
   ) {}
 
+  /** `enteredByUserId` is the linked coach when a coach logs for the user. */
   async create(
     userId: string,
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
+    enteredByUserId?: string,
   ): Promise<CreatedExerciseLogResponse> {
-    return this.createForExercise(userId, exerciseSlug, dto, false);
+    return this.createForExercise(
+      userId,
+      exerciseSlug,
+      dto,
+      false,
+      enteredByUserId,
+    );
   }
 
   async createCustom(
     userId: string,
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
+    enteredByUserId?: string,
   ): Promise<CreatedExerciseLogResponse> {
-    return this.createForExercise(userId, exerciseSlug, dto, true);
+    return this.createForExercise(
+      userId,
+      exerciseSlug,
+      dto,
+      true,
+      enteredByUserId,
+    );
   }
 
   async findRecent(
@@ -141,15 +162,20 @@ export class ExerciseLogsService {
     return this.findRecentForExercise(userId, exerciseSlug, limit, true);
   }
 
+  /**
+   * Replaces a log's sets. With `enteredByUserId` (a coach acting for the
+   * user), only logs that coach entered can be changed.
+   */
   async update(
     userId: string,
     id: string,
     dto: CreateExerciseLogDto,
+    enteredByUserId?: string,
   ): Promise<ExerciseLogResponse> {
     const exerciseLog = await this.prisma.client.$transaction(
       async (transaction) => {
         const existing = await transaction.exerciseLog.findFirst({
-          where: { id, userId },
+          where: { id, userId, enteredByUserId },
           select: { id: true },
         });
 
@@ -179,9 +205,13 @@ export class ExerciseLogsService {
     return this.toResponse(exerciseLog);
   }
 
-  async remove(userId: string, id: string): Promise<void> {
+  async remove(
+    userId: string,
+    id: string,
+    enteredByUserId?: string,
+  ): Promise<void> {
     const result = await this.prisma.client.exerciseLog.deleteMany({
-      where: { id, userId },
+      where: { id, userId, enteredByUserId },
     });
 
     if (result.count === 0) {
@@ -194,6 +224,7 @@ export class ExerciseLogsService {
     exerciseSlug: string,
     dto: CreateExerciseLogDto,
     isCustom: boolean,
+    enteredByUserId?: string,
   ): Promise<CreatedExerciseLogResponse> {
     const { exerciseLog, previousBest } = await this.prisma.client.$transaction(
       async (transaction) => {
@@ -221,6 +252,7 @@ export class ExerciseLogsService {
             userId,
             exerciseId: exercise.id,
             sessionId,
+            enteredByUserId,
             exerciseSets: {
               create: dto.sets.map((set, index) => ({
                 setNumber: index + 1,
@@ -343,6 +375,7 @@ export class ExerciseLogsService {
       weightKg: { toString(): string };
       reps: number;
     }[];
+    enteredBy: { id: string; username: string } | null;
   }): ExerciseLogResponse {
     return {
       id: exerciseLog.id,
@@ -352,6 +385,7 @@ export class ExerciseLogsService {
         weightKg: set.weightKg.toString(),
         reps: set.reps,
       })),
+      enteredBy: exerciseLog.enteredBy,
     };
   }
 
@@ -370,6 +404,7 @@ export class ExerciseLogsService {
       muscleGroup: { name: string; slug: string };
       preferences: { customName: string | null }[];
     };
+    enteredBy: { id: string; username: string } | null;
     session: {
       id: string;
       startedAt: Date;

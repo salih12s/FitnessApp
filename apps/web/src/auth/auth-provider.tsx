@@ -9,6 +9,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 
 import { ApiError, setApiAuth } from '@/lib/api';
+import { setWeightUnit } from '@/lib/format';
 
 import {
   loginRequest,
@@ -17,7 +18,12 @@ import {
   registerRequest,
 } from './auth-api';
 import { AuthContext, type AuthContextValue } from './auth-context';
-import type { AuthCredentials, AuthSession, AuthStatus } from './auth-types';
+import type {
+  AuthCredentials,
+  AuthSession,
+  AuthStatus,
+  AuthUser,
+} from './auth-types';
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const queryClient = useQueryClient();
@@ -33,6 +39,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         queryClient.clear();
       }
 
+      setWeightUnit(nextSession?.user.weightUnit ?? 'kg');
       sessionRef.current = nextSession;
       setSession(nextSession);
       setStatus(nextSession ? 'authenticated' : 'unauthenticated');
@@ -100,6 +107,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     applySession(null);
   }, [applySession]);
 
+  const updateUser = useCallback(
+    (user: AuthUser) => {
+      if (sessionRef.current) {
+        applySession({ ...sessionRef.current, user });
+      }
+    },
+    [applySession],
+  );
+
+  const clearSession = useCallback(() => applySession(null), [applySession]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
@@ -107,8 +125,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       register,
+      updateUser,
+      clearSession,
     }),
-    [login, logout, register, session, status],
+    [clearSession, login, logout, register, session, status, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

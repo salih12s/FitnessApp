@@ -12,14 +12,14 @@ describe('template row validation', () => {
       validateTemplateRow({
         targetSets: '3',
         targetReps: '8',
-        targetWeightKg: '',
+        targetWeight: '',
       }),
     ).toEqual({});
     expect(
       validateTemplateRow({
         targetSets: '4',
         targetReps: '10',
-        targetWeightKg: '82,5',
+        targetWeight: '82,5',
       }),
     ).toEqual({});
   });
@@ -28,13 +28,13 @@ describe('template row validation', () => {
     const errors = validateTemplateRow({
       targetSets: '0',
       targetReps: '8.5',
-      targetWeightKg: '-5',
+      targetWeight: '-5',
     });
 
     expect(Object.keys(errors).sort()).toEqual([
       'targetReps',
       'targetSets',
-      'targetWeightKg',
+      'targetWeight',
     ]);
   });
 

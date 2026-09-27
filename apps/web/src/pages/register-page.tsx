@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { Link, useNavigate } from 'react-router';
+import { Link, useLocation, useNavigate } from 'react-router';
 
 import { getAuthErrorMessage } from '@/auth/auth-api';
+import { postAuthDestination } from '@/auth/route-access';
 import { useAuth } from '@/auth/use-auth';
 import { PasswordField, UsernameField } from '@/components/auth/auth-fields';
 import { AuthLayout } from '@/components/auth/auth-layout';
@@ -11,6 +12,7 @@ import { isValidUsername, normalizeUsername } from '@/lib/username';
 
 export function RegisterPage() {
   const { register } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,7 +36,7 @@ export function RegisterPage() {
 
     try {
       await register({ username, password });
-      navigate('/app', { replace: true });
+      navigate(postAuthDestination(location.state), { replace: true });
     } catch (submitError: unknown) {
       setError(getAuthErrorMessage(submitError));
     } finally {
@@ -81,6 +83,7 @@ export function RegisterPage() {
         Zaten hesabın var mı?{' '}
         <Link
           className="inline-flex min-h-11 items-center rounded-sm px-1 font-semibold text-foreground underline decoration-border-strong underline-offset-4 outline-none transition-colors hover:decoration-primary focus-visible:ring-3 focus-visible:ring-ring"
+          state={location.state}
           to="/login"
         >
           Giriş yap

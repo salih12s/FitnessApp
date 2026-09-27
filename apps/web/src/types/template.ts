@@ -1,4 +1,4 @@
-import type { MuscleReference } from './exercise';
+import type { LinkedUser, MuscleReference } from './exercise';
 
 export interface TemplateExercise {
   position: number;
@@ -20,6 +20,8 @@ export interface WorkoutTemplate {
   /** Weekday bitmask: Monday = 1 ... Sunday = 64. */
   scheduledDays: number;
   lastUsedAt: string | null;
+  /** The coach who assigned this program; null for the user's own. */
+  assignedBy: LinkedUser | null;
   exercises: TemplateExercise[];
 }
 

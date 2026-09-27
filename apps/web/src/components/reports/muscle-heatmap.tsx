@@ -1,7 +1,7 @@
 import bodyBackUrl from '@/assets/muscles/body-back.svg';
 import bodyFrontUrl from '@/assets/muscles/body-front.svg';
 import { muscleRegions, type BodyView } from '@/data/muscle-regions';
-import { formatWeight } from '@/lib/format';
+import { formatWeightWithUnit } from '@/lib/format';
 import { heatOpacity } from '@/lib/strength';
 import type { MuscleGroupVolume } from '@/types/report';
 
@@ -115,7 +115,7 @@ export function MuscleHeatmap({
               </span>
               <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                 {volume > 0
-                  ? `${group.setCount} set · ${formatWeight(volume)} kg`
+                  ? `${group.setCount} set · ${formatWeightWithUnit(volume)}`
                   : 'çalışılmadı'}
               </span>
             </li>

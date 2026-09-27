@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { ApiError } from '@/lib/api';
+import { getWeightUnit, toWeightInput } from '@/lib/format';
 import {
   toTargetWeight,
   validateTemplateRow,
@@ -143,7 +144,9 @@ function ProgramForm({ template }: { template?: WorkoutTemplate }) {
         exercise: row.exercise,
         targetSets: String(row.targetSets),
         targetReps: String(row.targetReps),
-        targetWeightKg: row.targetWeightKg?.replace('.', ',') ?? '',
+        targetWeight: row.targetWeightKg
+          ? toWeightInput(row.targetWeightKg).replace('.', ',')
+          : '',
       })) ?? [],
   );
   const [rowErrors, setRowErrors] = useState<Record<number, TemplateRowErrors>>(
@@ -160,7 +163,7 @@ function ProgramForm({ template }: { template?: WorkoutTemplate }) {
           exerciseId: row.exercise.id,
           targetSets: Number(row.targetSets),
           targetReps: Number(row.targetReps),
-          targetWeightKg: toTargetWeight(row.targetWeightKg),
+          targetWeightKg: toTargetWeight(row.targetWeight),
         })),
       };
       return template
@@ -303,7 +306,7 @@ function ProgramForm({ template }: { template?: WorkoutTemplate }) {
             {rows.map((row, index) => {
               const errors = rowErrors[row.key] ?? {};
               const message =
-                errors.targetSets ?? errors.targetReps ?? errors.targetWeightKg;
+                errors.targetSets ?? errors.targetReps ?? errors.targetWeight;
 
               return (
                 <li
@@ -363,7 +366,12 @@ function ProgramForm({ template }: { template?: WorkoutTemplate }) {
                       [
                         ['targetSets', 'Set', 'numeric', '3'],
                         ['targetReps', 'Tekrar', 'numeric', '8'],
-                        ['targetWeightKg', 'Kg (isteğe bağlı)', 'decimal', '-'],
+                        [
+                          'targetWeight',
+                          `${getWeightUnit() === 'kg' ? 'Kg' : 'Lb'} (isteğe bağlı)`,
+                          'decimal',
+                          '-',
+                        ],
                       ] as const
                     ).map(([field, label, inputMode, placeholder]) => (
                       <label className="min-w-0" key={field}>
@@ -404,7 +412,7 @@ function ProgramForm({ template }: { template?: WorkoutTemplate }) {
                 exercise,
                 targetSets: '3',
                 targetReps: '8',
-                targetWeightKg: '',
+                targetWeight: '',
               },
             ])
           }

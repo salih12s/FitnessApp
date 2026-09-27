@@ -8,7 +8,7 @@ import { Link } from 'react-router';
 import { finishSession, sessionKeys } from '@/api/sessions';
 import { Button } from '@/components/ui/button';
 import { exercisePath } from '@/lib/exercise-path';
-import { formatWeight } from '@/lib/format';
+import { formatWeightWithUnit } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { formatDuration, formatElapsed } from '@/lib/session-time';
 import type { WorkoutSession } from '@/types/session';
@@ -199,7 +199,7 @@ export function ActiveSessionBar() {
                       <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
                         {row.targetSets} × {row.targetReps}
                         {row.targetWeightKg
-                          ? ` · ${formatWeight(row.targetWeightKg)} kg`
+                          ? ` · ${formatWeightWithUnit(row.targetWeightKg)}`
                           : ''}
                       </span>
                     </Link>
@@ -219,7 +219,7 @@ export function ActiveSessionBar() {
                   <SummaryValue label="Set" value={String(session.setCount)} />
                   <SummaryValue
                     label="Hacim"
-                    value={`${formatWeight(session.totalVolumeKg)} kg`}
+                    value={`${formatWeightWithUnit(session.totalVolumeKg)}`}
                   />
                 </dl>
                 {session.exerciseCount === 0 ? (
@@ -286,7 +286,7 @@ export function ActiveSessionBar() {
                   Antrenman kaydedildi.{' '}
                   <span className="text-muted-foreground">
                     {formatDuration(result.durationMs)} ·{' '}
-                    {formatWeight(result.totalVolumeKg)} kg hacim
+                    {formatWeightWithUnit(result.totalVolumeKg)} hacim
                   </span>
                 </>
               ) : (

@@ -59,7 +59,7 @@ export function MuscleGroupPage() {
   });
   const reportExercisesQuery = useQuery({
     queryKey: reportKeys.exercises,
-    queryFn: getReportExercises,
+    queryFn: () => getReportExercises(),
     retry: 1,
   });
 

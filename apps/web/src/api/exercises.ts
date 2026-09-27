@@ -1,4 +1,5 @@
 import { authorizedRequest } from '@/lib/api';
+import { scopedApiPath } from '@/lib/client-scope';
 import type {
   CreatedExerciseLog,
   ExerciseDetail,
@@ -33,36 +34,44 @@ export function getExercisesByMuscleGroup(
 
 export function searchExercises(
   searchQuery: string,
+  clientId?: string,
 ): Promise<ExerciseSummary[]> {
   const query = new URLSearchParams({ q: searchQuery });
 
-  return authorizedRequest(`/exercises/search?${query.toString()}`);
+  return authorizedRequest(
+    scopedApiPath(`/exercises/search?${query.toString()}`, clientId),
+  );
 }
 
 export function getExercise(
   slug: string,
   isCustom = false,
+  clientId?: string,
 ): Promise<ExerciseDetail> {
-  return authorizedRequest(exerciseApiPath(slug, isCustom));
+  return authorizedRequest(
+    scopedApiPath(exerciseApiPath(slug, isCustom), clientId),
+  );
 }
 
 export function getRecentExerciseLogs(
   slug: string,
   isCustom = false,
+  clientId?: string,
 ): Promise<ExerciseLog[]> {
   const query = new URLSearchParams({ limit: '5' });
 
   const path = `${exerciseApiPath(slug, isCustom)}/logs`;
-  return authorizedRequest(`${path}?${query}`);
+  return authorizedRequest(scopedApiPath(`${path}?${query}`, clientId));
 }
 
 export function createExerciseLog(
   slug: string,
   sets: ExerciseSetInput[],
   isCustom = false,
+  clientId?: string,
 ): Promise<CreatedExerciseLog> {
   const path = `${exerciseApiPath(slug, isCustom)}/logs`;
-  return authorizedRequest(path, {
+  return authorizedRequest(scopedApiPath(path, clientId), {
     method: 'POST',
     body: JSON.stringify({ sets }),
   });
@@ -71,17 +80,27 @@ export function createExerciseLog(
 export function updateExerciseLog(
   id: string,
   sets: ExerciseSetInput[],
+  clientId?: string,
 ): Promise<ExerciseLog> {
-  return authorizedRequest(`/logs/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
-    body: JSON.stringify({ sets }),
-  });
+  return authorizedRequest(
+    scopedApiPath(`/logs/${encodeURIComponent(id)}`, clientId),
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ sets }),
+    },
+  );
 }
 
-export function deleteExerciseLog(id: string): Promise<void> {
-  return authorizedRequest(`/logs/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-  });
+export function deleteExerciseLog(
+  id: string,
+  clientId?: string,
+): Promise<void> {
+  return authorizedRequest(
+    scopedApiPath(`/logs/${encodeURIComponent(id)}`, clientId),
+    {
+      method: 'DELETE',
+    },
+  );
 }
 
 export function renameExercise(
@@ -126,7 +145,10 @@ export interface HistoryRequest {
   muscleGroup?: string;
 }
 
-export function getHistory(request: HistoryRequest): Promise<HistoryPage> {
+export function getHistory(
+  request: HistoryRequest,
+  clientId?: string,
+): Promise<HistoryPage> {
   const query = new URLSearchParams({
     page: String(request.page),
     limit: String(request.limit ?? 20),
@@ -141,5 +163,7 @@ export function getHistory(request: HistoryRequest): Promise<HistoryPage> {
     query.set('muscleGroup', request.muscleGroup);
   }
 
-  return authorizedRequest(`/history?${query.toString()}`);
+  return authorizedRequest(
+    scopedApiPath(`/history?${query.toString()}`, clientId),
+  );
 }

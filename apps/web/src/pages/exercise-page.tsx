@@ -8,13 +8,13 @@ import {
   getRecentExerciseLogs,
 } from '@/api/exercises';
 import { getExerciseReport, reportKeys } from '@/api/reports';
-import { BenchPressAnimation } from '@/components/common/bench-press-animation';
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import { PageHeader } from '@/components/common/page-header';
 import { RecentWorkout } from '@/components/workouts/recent-workout';
 import { WorkoutEntrySection } from '@/components/workouts/workout-entry-section';
 import { ApiError } from '@/lib/api';
-import { formatWeight } from '@/lib/format';
+import { scopedAppPath, useClientScope } from '@/lib/client-scope';
+import { formatWeight, getWeightUnit } from '@/lib/format';
 
 interface ExercisePageProps {
   isCustom?: boolean;
@@ -22,35 +22,37 @@ interface ExercisePageProps {
 
 export function ExercisePage({ isCustom = false }: ExercisePageProps) {
   const { slug } = useParams();
+  const clientId = useClientScope()?.clientId;
   const exerciseQuery = useQuery({
     queryKey: exerciseKeys.detail(slug ?? '', isCustom),
-    queryFn: () => getExercise(slug ?? '', isCustom),
+    queryFn: () => getExercise(slug ?? '', isCustom, clientId),
     enabled: Boolean(slug),
     retry: (failureCount, error) =>
       !(error instanceof ApiError && error.status === 404) && failureCount < 2,
   });
   const recentLogsQuery = useQuery({
     queryKey: exerciseKeys.logs(slug ?? '', isCustom),
-    queryFn: () => getRecentExerciseLogs(slug ?? '', isCustom),
+    queryFn: () => getRecentExerciseLogs(slug ?? '', isCustom, clientId),
     enabled: Boolean(slug && exerciseQuery.isSuccess),
     retry: 1,
   });
   const reportQuery = useQuery({
     queryKey: reportKeys.detail(slug ?? '', isCustom, 'all'),
-    queryFn: () => getExerciseReport(slug ?? '', isCustom, 'all'),
+    queryFn: () => getExerciseReport(slug ?? '', isCustom, 'all', clientId),
     enabled: Boolean(slug && exerciseQuery.isSuccess),
     retry: 1,
   });
 
+  const home = scopedAppPath('/app', clientId);
   if (!slug) {
-    return <Navigate replace to="/app" />;
+    return <Navigate replace to={home} />;
   }
 
   if (
     exerciseQuery.error instanceof ApiError &&
     exerciseQuery.error.status === 404
   ) {
-    return <Navigate replace to="/app" />;
+    return <Navigate replace to={home} />;
   }
 
   const exercise = exerciseQuery.data;
@@ -60,15 +62,23 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
     <div>
       <Link
         className="group inline-flex -ml-1 min-h-11 items-center gap-1.5 rounded-md px-1 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring"
-        to={exercise ? `/app/muscles/${exercise.muscleGroup.slug}` : '/app'}
+        to={
+          clientId
+            ? scopedAppPath('/app/log', clientId)
+            : exercise
+              ? `/app/muscles/${exercise.muscleGroup.slug}`
+              : '/app'
+        }
       >
         <ArrowLeft
           aria-hidden="true"
           className="size-4 transition-transform group-hover:-translate-x-0.5"
         />
-        {exercise
-          ? `${exercise.muscleGroup.name} hareketlerine dön`
-          : 'Geri dön'}
+        {clientId
+          ? 'Hareket seçimine dön'
+          : exercise
+            ? `${exercise.muscleGroup.name} hareketlerine dön`
+            : 'Geri dön'}
       </Link>
 
       {exerciseQuery.isPending ? (
@@ -138,7 +148,7 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
                   {summary ? formatWeight(summary.currentWeightKg) : '-'}
                   {summary ? (
                     <span className="ml-1 text-sm font-normal text-muted-foreground">
-                      kg
+                      {getWeightUnit()}
                     </span>
                   ) : null}
                 </dd>
@@ -154,16 +164,14 @@ export function ExercisePage({ isCustom = false }: ExercisePageProps) {
                 <dd className="metric-number mt-1 text-2xl font-semibold text-primary">
                   {summary ? formatWeight(summary.personalRecordKg) : '-'}
                   {summary ? (
-                    <span className="ml-1 text-sm font-normal">kg</span>
+                    <span className="ml-1 text-sm font-normal">
+                      {getWeightUnit()}
+                    </span>
                   ) : null}
                 </dd>
               </div>
             </dl>
           </header>
-
-          {!exercise.isCustom && exercise.slug === 'barbell-bench-press' ? (
-            <BenchPressAnimation />
-          ) : null}
 
           <WorkoutEntrySection
             exerciseSlug={exercise.slug}

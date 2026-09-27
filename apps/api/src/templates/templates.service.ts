@@ -31,6 +31,8 @@ export interface TemplateResponse {
   name: string;
   scheduledDays: number;
   lastUsedAt: string | null;
+  /** The coach who assigned this template; null for the user's own. */
+  assignedBy: { id: string; username: string } | null;
   exercises: TemplateExerciseResponse[];
 }
 
@@ -83,6 +85,7 @@ function templateSelect(userId: string) {
     id: true,
     name: true,
     scheduledDays: true,
+    assignedBy: { select: { id: true, username: true } },
     exercises: templateExercisesSelect(userId),
     sessions: {
       orderBy: { startedAt: 'desc' as const },
@@ -102,6 +105,7 @@ function toTemplateResponse(template: TemplateRecord): TemplateResponse {
     name: template.name,
     scheduledDays: template.scheduledDays,
     lastUsedAt: template.sessions[0]?.startedAt.toISOString() ?? null,
+    assignedBy: template.assignedBy,
     exercises: template.exercises.map(toTemplateExerciseResponse),
   };
 }
@@ -180,6 +184,68 @@ export class TemplatesService {
     if (result.count === 0) {
       throw new NotFoundException('Workout template was not found.');
     }
+  }
+
+  /**
+   * Copies one of the coach's templates into a linked client's programs.
+   * The copy belongs to the client; the coach's custom exercises are not in
+   * the client's library, so templates using them are rejected.
+   */
+  async assignToClient(
+    coachId: string,
+    templateId: string,
+    clientId: string,
+  ): Promise<TemplateResponse> {
+    const template = await this.prisma.client.$transaction(async (db) => {
+      const source = await db.workoutTemplate.findFirst({
+        where: { id: templateId, userId: coachId },
+        select: {
+          name: true,
+          scheduledDays: true,
+          exercises: {
+            orderBy: { position: 'asc' },
+            select: {
+              exerciseId: true,
+              position: true,
+              targetSets: true,
+              targetReps: true,
+              targetWeightKg: true,
+              exercise: { select: { isCustom: true } },
+            },
+          },
+        },
+      });
+
+      if (!source) {
+        throw new NotFoundException('Workout template was not found.');
+      }
+      if (source.exercises.some((row) => row.exercise.isCustom)) {
+        throw new BadRequestException(
+          'Templates with custom exercises cannot be assigned.',
+        );
+      }
+
+      return db.workoutTemplate.create({
+        data: {
+          userId: clientId,
+          assignedByUserId: coachId,
+          name: source.name,
+          scheduledDays: source.scheduledDays,
+          exercises: {
+            create: source.exercises.map((row) => ({
+              exerciseId: row.exerciseId,
+              position: row.position,
+              targetSets: row.targetSets,
+              targetReps: row.targetReps,
+              targetWeightKg: row.targetWeightKg,
+            })),
+          },
+        },
+        select: templateSelect(clientId),
+      });
+    });
+
+    return toTemplateResponse(template);
   }
 
   async findOwnedId(

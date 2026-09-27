@@ -4,6 +4,7 @@ import * as m from 'motion/react-m';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { getWeightUnit } from '@/lib/format';
 import type { useWorkoutSets } from './use-workout-sets';
 
 interface SetEditorProps {
@@ -29,7 +30,7 @@ export function SetEditor({
         <AnimatePresence initial={false} mode="popLayout">
           {editor.sets.map((set, index) => {
             const setErrors = editor.errors[set.id];
-            const hasErrors = Boolean(setErrors?.weightKg || setErrors?.reps);
+            const hasErrors = Boolean(setErrors?.weight || setErrors?.reps);
 
             return (
               <m.li
@@ -48,24 +49,24 @@ export function SetEditor({
                   <label className="relative min-w-0">
                     <span className="sr-only">Set {index + 1} ağırlık</span>
                     <Input
-                      aria-invalid={Boolean(setErrors?.weightKg)}
+                      aria-invalid={Boolean(setErrors?.weight)}
                       className="metric-number h-12 min-w-0 px-3 pr-9 text-lg font-semibold sm:text-lg"
                       disabled={disabled}
                       inputMode="decimal"
                       max="9999.99"
                       min="0"
                       onChange={(event) => {
-                        editor.update(set.id, 'weightKg', event.target.value);
+                        editor.update(set.id, 'weight', event.target.value);
                         onChange?.();
                       }}
                       placeholder="0"
                       required
                       step="0.01"
                       type="number"
-                      value={set.weightKg}
+                      value={set.weight}
                     />
                     <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      kg
+                      {getWeightUnit()}
                     </span>
                   </label>
                   <label className="relative min-w-0">
@@ -111,7 +112,7 @@ export function SetEditor({
                     className="mt-1.5 pl-10 text-xs leading-5 text-destructive"
                     role="alert"
                   >
-                    {setErrors?.weightKg ?? setErrors?.reps}
+                    {setErrors?.weight ?? setErrors?.reps}
                   </p>
                 ) : null}
               </m.li>

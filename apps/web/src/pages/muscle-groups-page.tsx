@@ -28,7 +28,12 @@ import { StartSessionButton } from '@/components/sessions/start-session-button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/auth/use-auth';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { formatWeight, formatWeightChange } from '@/lib/format';
+import {
+  formatWeight,
+  formatWeightChange,
+  formatWeightWithUnit,
+  getWeightUnit,
+} from '@/lib/format';
 
 function getGreeting(date: Date): string {
   const hour = date.getHours();
@@ -93,13 +98,13 @@ export function MuscleGroupsPage() {
   });
   const reportExercisesQuery = useQuery({
     queryKey: reportKeys.exercises,
-    queryFn: getReportExercises,
+    queryFn: () => getReportExercises(),
     retry: 1,
   });
   const latestReportExercise = reportExercisesQuery.data?.[0];
   const overviewQuery = useQuery({
     queryKey: reportKeys.overview,
-    queryFn: getReportOverview,
+    queryFn: () => getReportOverview(),
     enabled: Boolean(latestReportExercise),
     retry: 1,
   });
@@ -178,22 +183,22 @@ export function MuscleGroupsPage() {
               <span className="metric-number text-4xl font-semibold text-foreground">
                 {formatWeight(latestSummary.currentWeightKg)}
                 <span className="ml-1 text-base font-normal text-muted-foreground">
-                  kg
+                  {getWeightUnit()}
                 </span>
               </span>
               <span className="metric-number text-sm font-semibold text-primary">
-                {formatWeightChange(latestSummary.increaseKg)} kg
+                {formatWeightChange(latestSummary.increaseKg)} {getWeightUnit()}
               </span>
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               Başlangıç{' '}
               <span className="font-mono tabular-nums">
-                {formatWeight(latestSummary.startingWeightKg)} kg
+                {formatWeightWithUnit(latestSummary.startingWeightKg)}
               </span>
               <span className="mx-1.5">·</span>
               Rekor{' '}
               <span className="font-mono tabular-nums">
-                {formatWeight(latestSummary.personalRecordKg)} kg
+                {formatWeightWithUnit(latestSummary.personalRecordKg)}
               </span>
             </p>
           </div>

@@ -12,11 +12,17 @@ User
 │   └── ExerciseSet
 ├── WorkoutSession
 │   └── ExerciseLog (optional)
+├── WorkoutTemplate
+│   ├── TemplateExercise
+│   └── WorkoutSession (optional)
+├── BodyMeasurement
+├── CoachClient (as coach or as client)
 └── RefreshSession
 
 Exercise
 ├── MuscleGroup
-└── ExerciseLog
+├── ExerciseLog
+└── TemplateExercise
 
 MuscleGroup
 └── Exercise
@@ -30,14 +36,18 @@ The exercise library currently contains 125 practical commercial-gym exercises. 
 
 ## Entities
 
-- **User:** Identified by a UUID with a unique, lowercase username (3-20 letters, digits, `.` or `_`) and password hash. Accounts created before usernames existed received one derived from their former email address. Plain-text passwords must never be stored.
+- **User:** Identified by a UUID with a unique, lowercase username (3-20 letters, digits, `.` or `_`), password hash, and display `weightUnit` (`kg` default or `lb`). Weights are always stored in kilograms; the unit only changes how the web app shows and accepts them (1 lb = 0.45359237 kg, converted kilograms rounded to 2 decimals). Accounts created before usernames existed received one derived from their former email address. Plain-text passwords must never be stored.
 - **RefreshSession:** One independently revocable login session. Only a SHA-256 hash of its high-entropy refresh credential is stored; the raw credential exists only in an `HttpOnly` cookie.
 - **MuscleGroup:** A uniquely named and uniquely slugged classification.
 - **Exercise:** A global or user-owned exercise with one required muscle group, instructions, and optional equipment/media fields. `isCustom` and nullable `createdByUserId` distinguish user-owned exercises.
 - **ExercisePreference:** One user's customization of one exercise, unique per `(userId, exerciseId)`: an optional display-name override (`customName`) and an optional `hiddenAt` marker for exercises removed from that user's library.
-- **ExerciseLog:** One historical exercise performance belonging to exactly one user and exercise, optionally inside a workout session.
+- **ExerciseLog:** One historical exercise performance belonging to exactly one user and exercise, optionally inside a workout session. `enteredByUserId` is set when a linked coach entered the log for the user; the user's own logs, including every log from before coach mode existed, keep it null.
+- **CoachClient:** Permission for one user (`coachId`) to view another user's (`clientId`) history and reports and to enter logs for them. Unique per `(coachId, clientId)`; a client may have several coaches. Links are created only when the client accepts the coach's invite code (`User.coachInviteCode`, 8 characters, unique, only while `User.isCoach` is true) and can be removed by either side. Access checks go through `LinkedClientGuard`, which answers 404 for anyone without a link. A coach may edit or delete only the logs they entered.
 - **WorkoutSession:** One visit to the gym, owned by one user, with `startedAt`, a nullable `endedAt` (null while the session is active), and an optional note. A user has at most one active session; `SessionsService` enforces this inside a transaction that locks the user row, because MySQL has no partial unique index. Logs created while a session is active get its `sessionId`. Logs created outside a session, including every log from before sessions existed, keep `sessionId` null. A session active for more than 6 hours is finished automatically at its last log's time the next time the user reads or starts a session; one without logs is deleted instead, as is a session finished without logs.
 - **ExerciseSet:** One ordered set within an exercise log, with its own weight and repetition count.
+- **WorkoutTemplate:** A user's reusable program (`assignedByUserId` names the coach when the template is a copy a coach assigned): a name (1-80 characters) and `scheduledDays`, a weekday bitmask (Monday = 1, Tuesday = 2, ... Sunday = 64; 0 means unscheduled) used by the history calendar. Starting a session from a template stores its `templateId` on the session so the session bar can show the plan checklist.
+- **TemplateExercise:** One planned exercise inside a template, ordered by `position` (unique per template), with `targetSets` (1-20), `targetReps` (1-100), and an optional `targetWeightKg` (`DECIMAL(6,2)`). Templates may use global exercises or the owner's own custom exercises only.
+- **BodyMeasurement:** One dated body measurement owned by a user: `measuredAt` (`DATE`), and optional `weightKg` (`DECIMAL(5,2)`), `bodyFatPercent` (`DECIMAL(4,1)`, 0-100), `waistCm`, `chestCm`, `armCm` (`DECIMAL(5,1)`), and a note. At least one value is required. Several measurements may share a date.
 
 `ExerciseLog` contains session-level context such as exercise, user, date, and notes. `ExerciseSet` is separate because each set can use a different weight and repetition count. Set order is determined by `setNumber`, which is unique within its log. Queries should order sets by `setNumber ASC`.
 
@@ -65,6 +75,12 @@ Deleting an `ExerciseLog` cascades only to its `ExerciseSet` children because se
 
 `ExerciseLog.sessionId` uses `SET NULL` on delete: removing a `WorkoutSession` detaches its logs and never deletes workout history. `WorkoutSession.userId` uses `RESTRICT`, like other user-owned history.
 
+`WorkoutSession.templateId` uses `SET NULL`: deleting a template keeps every session and log that was started from it. `TemplateExercise` rows cascade with their template and with their exercise, because a plan row is not history and has no meaning without either. `WorkoutTemplate.userId` and `BodyMeasurement.userId` use `RESTRICT` like other user-owned data.
+
+`CoachClient` rows cascade with either user: a link is permission, not history. `ExerciseLog.enteredByUserId` and `WorkoutTemplate.assignedByUserId` use `SET NULL`, so deleting a coach account or ending a link never removes a client's logs or programs. Turning coach mode off deletes the coach's links and invite code.
+
+Account deletion (`DELETE /api/users/me`) is the one workflow that removes a user's history, by explicit product decision: it requires the current password and the typed confirmation `hesabımı sil`, and the profile offers the CSV export first. `UsersService.deleteAccount` removes the data in one transaction in dependency order: logs (sets cascade), sessions, templates (plan rows cascade), measurements, exercise preferences, refresh sessions, custom exercises, then the user. No foreign key was relaxed for this; the service deletes each dependent explicitly.
+
 Deleting a `User` cascades to its `RefreshSession` and `ExercisePreference` records because sessions and display preferences have no meaning without the account. Deleting an `Exercise` cascades to its `ExercisePreference` records for the same reason. Historical exercise relationships retain their restrictive deletion behavior.
 
 Foreign keys cascade identifier updates so references remain consistent, although UUID identifiers should normally be immutable.
@@ -82,6 +98,13 @@ Foreign keys cascade identifier updates so references remain consistent, althoug
 - `ExerciseLog(performedAt)` supports date-range queries across logs.
 - `ExerciseLog(sessionId)` supports loading a session's logs and the session foreign key.
 - `WorkoutSession(userId, startedAt DESC)` supports finding a user's active and recent sessions.
+- `WorkoutSession(templateId)` supports the template foreign key.
+- `WorkoutTemplate(userId)` supports listing a user's templates.
+- `TemplateExercise(templateId, position)` is unique and supports ordered plan lookup; `TemplateExercise(exerciseId)` supports the exercise foreign key.
+- `BodyMeasurement(userId, measuredAt DESC)` supports a user's newest-first measurement list.
+- `User(coachInviteCode)` is unique and resolves invite codes.
+- `CoachClient(coachId, clientId)` is unique and supports the coach's client list and access checks; `CoachClient(clientId)` supports the client's coach list.
+- `ExerciseLog(enteredByUserId)` and `WorkoutTemplate(assignedByUserId)` support their foreign keys.
 - `ExerciseSet(exerciseLogId, setNumber)` is unique, prevents duplicate set positions, and supports ordered set lookup without an additional redundant index.
 
 Every log query must be scoped to the authenticated user so one user's history is never returned to another user.

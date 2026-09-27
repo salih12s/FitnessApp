@@ -20,6 +20,7 @@ function log(
     id,
     performedAt,
     session: logSession,
+    enteredBy: null,
     sets: [
       { setNumber: 1, weightKg: '80', reps: 8 },
       { setNumber: 2, weightKg: '82.5', reps: 6 },

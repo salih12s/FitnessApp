@@ -1,7 +1,7 @@
 import { AlertTriangle } from 'lucide-react';
 
 import { FeedbackPanel } from '@/components/common/feedback-panel';
-import { formatWeight } from '@/lib/format';
+import { formatWeight, getWeightUnit } from '@/lib/format';
 import type { ExerciseLog } from '@/types/exercise';
 import { LogCardActions } from './log-card-actions';
 
@@ -90,7 +90,7 @@ export function RecentWorkout({
                     <span className="font-semibold text-foreground">
                       {formatWeight(set.weightKg)}
                     </span>{' '}
-                    kg ×{' '}
+                    {getWeightUnit()} ×{' '}
                     <span className="font-semibold text-foreground">
                       {set.reps}
                     </span>

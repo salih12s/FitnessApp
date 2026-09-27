@@ -18,7 +18,7 @@ type SetRow = {
 
 const DAY_MS = 86_400_000;
 
-function localDayKey(time: number, offsetMinutes: number): string {
+export function localDayKey(time: number, offsetMinutes: number): string {
   return new Date(time + offsetMinutes * 60_000).toISOString().slice(0, 10);
 }
 

@@ -1,6 +1,10 @@
+import type { WeightUnit } from '@/lib/format';
+
 export interface AuthUser {
   id: string;
   username: string;
+  weightUnit: WeightUnit;
+  isCoach: boolean;
   createdAt: string;
 }
 

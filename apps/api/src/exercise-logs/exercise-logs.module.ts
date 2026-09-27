@@ -17,5 +17,6 @@ import { LogsController } from './logs.controller.js';
     LogsController,
   ],
   providers: [ExerciseLogsService],
+  exports: [ExerciseLogsService],
 })
 export class ExerciseLogsModule {}

@@ -1,16 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertTriangle,
+  Check,
   ClipboardList,
   Pencil,
   Play,
   Plus,
+  Send,
   Trash2,
+  UserRound,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 
+import { assignTemplate, coachKeys, getClients } from '@/api/coach';
 import { deleteTemplate, getTemplates, templateKeys } from '@/api/templates';
+import { useAuth } from '@/auth/use-auth';
 import { FeedbackPanel } from '@/components/common/feedback-panel';
 import { PageHeader } from '@/components/common/page-header';
 import {
@@ -18,8 +23,9 @@ import {
   useStartSession,
 } from '@/components/sessions/use-active-session';
 import { Button } from '@/components/ui/button';
+import { ApiError } from '@/lib/api';
 import { exercisePath } from '@/lib/exercise-path';
-import { formatWeight } from '@/lib/format';
+import { formatWeightWithUnit } from '@/lib/format';
 import { formatSchedule } from '@/lib/weekdays';
 import type { WorkoutTemplate } from '@/types/template';
 
@@ -30,6 +36,107 @@ const lastUsedFormatter = new Intl.DateTimeFormat('tr-TR', {
 
 const secondaryLinkClass =
   'inline-flex min-h-12 items-center justify-center gap-2 rounded-md border border-border-strong bg-surface px-5 text-sm font-semibold text-foreground shadow-[0_1px_2px_var(--shadow-tint)] outline-none transition-[background-color,transform] duration-200 hover:bg-surface-elevated focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.98]';
+
+function AssignRow({
+  templateId,
+  client,
+}: {
+  templateId: string;
+  client: { id: string; username: string };
+}) {
+  const mutation = useMutation({
+    mutationFn: () => assignTemplate(client.id, templateId),
+  });
+
+  return (
+    <li className="py-2">
+      <div className="flex items-center gap-3">
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          {client.username}
+        </span>
+        {mutation.isSuccess ? (
+          <span
+            aria-live="polite"
+            className="flex min-h-11 items-center gap-1.5 text-sm font-medium text-success"
+          >
+            <Check aria-hidden="true" className="size-4" />
+            Atandı
+          </span>
+        ) : (
+          <Button
+            disabled={mutation.isPending}
+            onClick={() => mutation.mutate()}
+            variant="secondary"
+          >
+            {mutation.isPending ? 'Atanıyor…' : 'Ata'}
+          </Button>
+        )}
+      </div>
+      {mutation.isError ? (
+        <p className="mt-1 text-xs text-destructive" role="alert">
+          {mutation.error instanceof ApiError && mutation.error.status === 400
+            ? 'Özel hareket içeren programlar danışana atanamaz.'
+            : 'Atanamadı. Yeniden deneyebilirsin.'}
+        </p>
+      ) : null}
+    </li>
+  );
+}
+
+/** Copies the template into a client's programs; the coach's copy stays. */
+function AssignPanel({
+  templateId,
+  onClose,
+}: {
+  templateId: string;
+  onClose: () => void;
+}) {
+  const clientsQuery = useQuery({
+    queryKey: coachKeys.clients,
+    queryFn: getClients,
+    retry: 1,
+  });
+
+  return (
+    <div className="mt-3 rounded-md border border-border bg-surface-elevated p-3">
+      <p className="text-sm font-semibold text-foreground">Danışana ata</p>
+      <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+        Programın bir kopyası danışanın programlarına eklenir. Sonradan yaptığın
+        değişiklikler kopyaya yansımaz.
+      </p>
+      {clientsQuery.isPending ? (
+        <div aria-hidden="true" className="skeleton mt-3 h-11 rounded-md" />
+      ) : clientsQuery.isError ? (
+        <p className="mt-3 text-sm text-destructive" role="alert">
+          Danışan listesi alınamadı.
+        </p>
+      ) : clientsQuery.data.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Henüz danışanın yok.{' '}
+          <Link
+            className="font-semibold text-primary hover:underline"
+            to="/app/profile#coaching"
+          >
+            Davet kodunu paylaş
+          </Link>
+        </p>
+      ) : (
+        <ul className="mt-2 divide-y divide-border">
+          {clientsQuery.data.map((client) => (
+            <AssignRow
+              client={client}
+              key={client.id}
+              templateId={templateId}
+            />
+          ))}
+        </ul>
+      )}
+      <Button className="mt-2 w-full" onClick={onClose} variant="ghost">
+        Kapat
+      </Button>
+    </div>
+  );
+}
 
 function TemplateCard({
   template,
@@ -42,7 +149,9 @@ function TemplateCard({
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const startMutation = useStartSession();
   const deleteMutation = useMutation({
     mutationFn: () => deleteTemplate(template.id),
@@ -78,6 +187,12 @@ function TemplateCard({
               </>
             ) : null}
           </p>
+          {template.assignedBy ? (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <UserRound aria-hidden="true" className="size-3.5" />
+              Koçun atadı: {template.assignedBy.username}
+            </p>
+          ) : null}
         </div>
         <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
           {template.exercises.length} hareket
@@ -96,7 +211,7 @@ function TemplateCard({
             <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
               {row.targetSets} × {row.targetReps}
               {row.targetWeightKg
-                ? ` · ${formatWeight(row.targetWeightKg)} kg`
+                ? ` · ${formatWeightWithUnit(row.targetWeightKg)}`
                 : ''}
             </span>
           </li>
@@ -164,8 +279,25 @@ function TemplateCard({
             <Trash2 aria-hidden="true" className="size-4" />
             <span className="hidden sm:inline">Sil</span>
           </Button>
+          {user?.isCoach ? (
+            <Button
+              aria-expanded={isAssigning}
+              aria-label={`${template.name} programını danışana ata`}
+              onClick={() => setIsAssigning((current) => !current)}
+              variant="secondary"
+            >
+              <Send aria-hidden="true" className="size-4" />
+              <span className="hidden sm:inline">Danışana ata</span>
+            </Button>
+          ) : null}
         </div>
       )}
+      {isAssigning && !isConfirmingDelete ? (
+        <AssignPanel
+          onClose={() => setIsAssigning(false)}
+          templateId={template.id}
+        />
+      ) : null}
       {startMutation.isError ? (
         <p className="mt-2 text-sm text-destructive" role="alert">
           Antrenman başlatılamadı. Tekrar dene.

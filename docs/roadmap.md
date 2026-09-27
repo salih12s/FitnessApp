@@ -4,16 +4,16 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 
 ## Status
 
-| Phase | Title                      | Schema change | Status  |
-| ----- | -------------------------- | ------------- | ------- |
-| 0     | Precision redesign         | No            | Done    |
-| 1     | Log corrections            | No            | Done    |
-| 2     | Workout sessions           | Yes           | Done    |
-| 3     | Advanced reports           | No            | Done    |
-| 4     | Programs and templates     | Yes           | Finish  |
-| 5     | Profile and account        | Yes           | Next    |
-| 6     | Coach and client mode      | Yes           | Planned |
-| 7     | Offline logging (optional) | No            | Planned |
+| Phase | Title                      | Schema change | Status |
+| ----- | -------------------------- | ------------- | ------ |
+| 0     | Precision redesign         | No            | Done   |
+| 1     | Log corrections            | No            | Done   |
+| 2     | Workout sessions           | Yes           | Done   |
+| 3     | Advanced reports           | No            | Done   |
+| 4     | Programs and templates     | Yes           | Done   |
+| 5     | Profile and account        | Yes           | Done   |
+| 6     | Coach and client mode      | Yes           | Done   |
+| 7     | Offline logging (optional) | No            | Next   |
 
 Update this table when a phase is finished.
 
@@ -22,7 +22,7 @@ Update this table when a phase is finished.
 - Follow `AGENTS.md`, `docs/design-system.md` (UI), and `docs/database.md` (schema).
 - UI copy is Turkish. Code, comments, and docs are English.
 - Finish with `npm run format`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`, all passing.
-- Schema-changing phases add a Prisma migration and update `docs/database.md`. Test migrations on the local database first (`env-local.bat`, see `README.md`), never directly on the live Hostinger database. Never delete or rewrite existing workout data.
+- Schema-changing phases add a Prisma migration and update `docs/database.md`. Test migrations on the local database first (`env-local.bat`, see `docs/development.md`), never directly on the live Hostinger database. Never delete or rewrite existing workout data.
 - Add unit tests for new pure logic (for example validation or calculations) next to the existing `*.test.ts` files in `apps/web/src/lib`.
 
 ## Phase 1: Log corrections
@@ -89,7 +89,7 @@ Schema change. Groups the exercises a user logs in one visit to the gym into a s
   - Index `(userId, startedAt DESC)`.
 - `ExerciseLog.sessionId`: nullable, relation to `WorkoutSession` with `onDelete: SetNull` so removing a session can never remove workout history. Index `sessionId`. Existing rows stay `null`; the migration must not touch existing data.
 - A user has at most one active session. MySQL has no partial unique index, so enforce this in the service inside a transaction.
-- Create the migration with `npm run prisma:migrate -- --name add_workout_sessions` against the local database (`env-local.bat` first). Update `docs/database.md` (relationship tree, entities, deletion behavior) and add a short README note that this migration must be applied on Hostinger before deploying the new build.
+- Create the migration with `npm run prisma:migrate -- --name add_workout_sessions` against the local database (`env-local.bat` first). Update `docs/database.md` (relationship tree, entities, deletion behavior) and add a short note in `docs/development.md` that this migration must be applied on Hostinger before deploying the new build.
 
 ### 2b. API
 
@@ -131,7 +131,7 @@ No schema change.
 - Creating a log returns `record: { weightKg, previousKg } | null`; the entry form celebrates a new record.
 - Reports page: overview tiles, a muscle heat map on the anatomy artwork (with a text list so color is never the only signal), recent records, and an exercise chart that switches between top weight, estimated 1RM (Epley: `weight × (1 + reps / 30)`), and volume. The home page shows the overview tiles.
 
-## Phase 4: Programs and templates (code complete, finish the checklist)
+## Phase 4: Programs and templates (done)
 
 Implemented (migration `20260926173701_add_workout_templates`, applied locally):
 
@@ -140,13 +140,11 @@ Implemented (migration `20260926173701_add_workout_templates`, applied locally):
 - Web: "Programlar" navigation item, `/app/programs` list (start, edit, delete with inline confirmation), `/app/programs/new` and `/app/programs/:id` editor, plan checklist in the active-session bar, entry form prefilled with the plan target, and a "Liste / Takvim" switch on the history page (trained days filled, planned days outlined, day details with a start button for today).
 - API behavior was verified with scripted requests (ownership 404s, validation 400s, start from template, `isDone`, calendar totals, delete keeps sessions).
 
-Remaining before marking it done:
+- Screens were checked in the browser at 375px and desktop in light and dark themes, and `docs/database.md` documents the new models.
 
-1. Check the new screens in the browser at 375px and desktop, light and dark: programs list, editor (add, reorder, remove, validation), session bar checklist, template-prefilled entry form, calendar. The bottom navigation now has five items; make sure "Antrenmanlar" fits at 375px.
-2. Update `docs/database.md` (relationship tree, entities, deletion behavior, indexes) for `WorkoutTemplate`, `TemplateExercise`, and `WorkoutSession.templateId`.
-3. Run the full verification and set this phase to Done.
+## Phase 5: Profile and account (done)
 
-## Phase 5: Profile and account
+Implemented as specified below (migration `20260926175210_add_profile_account`). A wrong current password returns `403`, not `401`, so the web client does not mistake it for an expired access token. `GET /api/auth/sessions/count` returns `{ otherSessions }` for the profile, and `PATCH /api/users/me/preferences { weightUnit }` saves the unit.
 
 Decided: deleting an account removes everything (logs, sessions, templates, custom exercises, preferences, measurements, refresh sessions). It requires the current password and typing `hesabımı sil`, and the page offers CSV export first.
 
@@ -158,12 +156,52 @@ Decided: deleting an account removes everything (logs, sessions, templates, cust
 - **CSV export:** `GET /api/export/logs.csv` streams all of the user's sets (date, exercise, muscle group, set, weight_kg, reps, session start, session note) with a UTF-8 BOM so Excel shows Turkish characters; the web downloads it with the auth header via a blob URL.
 - Migration, `docs/database.md`, unit tests for conversions, and the usual verification.
 
+## Phase 6: Coach and client mode (done)
+
+Schema change (migration `20260927120000_add_coach_mode`). Follows the decisions at the end of this file.
+
+### 6a. Schema
+
+- `User.isCoach` (default `false`) and `User.coachInviteCode` (nullable, unique, 8 characters from `ABCDEFGHJKLMNPQRSTUVWXYZ23456789`).
+- `CoachClient` (table `coach_clients`): `id`, `coachId`, `clientId`, `createdAt`; unique `(coachId, clientId)`, index `clientId`. Both user relations cascade: a link is permission, not history.
+- `ExerciseLog.enteredByUserId`: nullable, `SET NULL` (a deleted coach account never removes a client's logs), indexed. Existing logs stay null.
+- `WorkoutTemplate.assignedByUserId`: nullable, `SET NULL`, indexed.
+- Account deletion keeps working: links cascade, `enteredBy` and `assignedBy` references become null.
+
+### 6b. API
+
+Coach mode and invites (`coach` module):
+
+- `GET /api/coach` returns `{ isCoach, inviteCode }`. `PUT /api/coach { enabled }` turns coach mode on (creates an invite code when missing) or off (removes every client link and the code).
+- `POST /api/coach/invite` replaces the invite code; the old code stops working.
+- `GET /api/coach/clients?offset=` lists linked clients: `id`, `username`, `linkedAt`, `lastActivityAt`, and the last 7 days' training days, sets, and volume.
+- `GET /api/coach/clients/:clientId`, `DELETE /api/coach/clients/:clientId` (the coach can also end a link).
+- Client data, under `/api/coach/clients/:clientId/...` with the same paths and shapes as the athlete's own endpoints: `history`, `reports/overview`, `reports/exercises`, `reports/exercises/[custom/]:slug`, `exercises/search`, `exercises/[custom/]:slug`, `exercises/[custom/]:slug/logs` (GET and POST), and `PATCH/DELETE logs/:id`. A guard checks that the caller is a coach linked to the client and answers 404 otherwise. Logs created here get `enteredByUserId` = coach and join the client's active session like the client's own logs. The coach may edit or delete only logs they entered (404 otherwise).
+- `POST /api/coach/clients/:clientId/templates { templateId }` copies one of the coach's templates into the client's programs with `assignedByUserId`. Templates that use the coach's custom exercises are rejected with 400.
+
+Athlete side (`coaches`):
+
+- `GET /api/coaches`: the user's coaches. `GET /api/coaches/invites/:code`: preview (`coach`, `alreadyLinked`), 404 for unknown codes and codes of users who are not coaches, 400 for the user's own code. `POST /api/coaches { code }`: accept (idempotent). `DELETE /api/coaches/:coachId`: remove a coach.
+- Log responses gain `enteredBy: { id, username } | null`; template responses gain `assignedBy: { id, username } | null`. `PublicUser` gains `isCoach`.
+
+### 6c. Web
+
+- Profile, "Koçluk" section: the user's coaches with inline-confirmed removal; a code field that previews the coach and asks for acceptance, stating what the coach can see and do; coach mode switch; for coaches the invite code, a copyable join link (`/app/join/:code`), a new-code action, and turning coach mode off with an inline confirmation.
+- `/app/join/:code`: the same preview and acceptance for invite links (after sign-in when needed).
+- Coaches get a "Danışanlar" navigation item (the six-item mobile bar uses short labels) and `/app/clients`: client cards with last activity and the 7-day summary, opening a client workspace.
+- Client workspace `/app/clients/:clientId` with tabs Raporlar (the reports page: overview, heat map, records, progress chart), Antrenmanlar (history), and Antrenman gir (recent exercises or search, then the regular exercise page). The existing pages are reused inside a client scope that routes their requests to the client endpoints and uses its own query cache; own-only features (sessions, calendar, templates, library management) are hidden there. Coach-entered logs show edit and delete; the client's own logs do not.
+- The client sees "Koçun girdi: <kullanıcı>" on coach-entered logs and "Koçun: <kullanıcı>" on assigned programs. Programs page: coaches can assign a template to a client.
+
+### Done when
+
+- A client can accept and remove coaches; a coach can see only linked clients (404 otherwise) and loses access immediately after removal.
+- A coach can enter logs for a client and edit or delete only those.
+- Migration applied locally, `docs/database.md` updated, pure logic tested, full verification passing, screens checked at 375px and desktop in both themes.
+
 ## Later phases (summary)
 
-Detailed specs are written when a phase starts.
-
-- **Phase 6, coach and client mode:** see the decisions below. `CoachClient` relation created through an invite code or link that the client accepts; the client can remove a coach at any time; coach dashboard with client list, last activity, and progress summary; coaches can assign phase 4 templates. Ownership checks in existing services gain "or a linked coach". Later: coach comments on logs.
 - **Phase 7, offline logging (optional):** queue logs in IndexedDB while offline and send them when the connection returns.
+- Coach comments on logs (after phase 6).
 
 ## Decisions already made
 

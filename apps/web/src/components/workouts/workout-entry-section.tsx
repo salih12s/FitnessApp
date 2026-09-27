@@ -6,7 +6,8 @@ import * as m from 'motion/react-m';
 import { createExerciseLog, exerciseKeys } from '@/api/exercises';
 import { Button } from '@/components/ui/button';
 import { ApiError } from '@/lib/api';
-import { formatWeight } from '@/lib/format';
+import { useClientScope } from '@/lib/client-scope';
+import { formatWeightWithUnit } from '@/lib/format';
 import { plannedSets } from '@/lib/template-form';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
 import type {
@@ -35,10 +36,10 @@ function getSaveErrorMessage(error: unknown): string {
 function lastWorkoutHint(log: ExerciseLog): string {
   const firstWeight = log.sets[0]?.weightKg;
   if (log.sets.every((set) => set.weightKg === firstWeight)) {
-    return `${formatWeight(firstWeight)} kg × ${log.sets.map((set) => set.reps).join(', ')}`;
+    return `${formatWeightWithUnit(firstWeight)} × ${log.sets.map((set) => set.reps).join(', ')}`;
   }
   return log.sets
-    .map((set) => `${formatWeight(set.weightKg)} kg × ${set.reps}`)
+    .map((set) => `${formatWeightWithUnit(set.weightKg)} × ${set.reps}`)
     .join(' · ');
 }
 
@@ -49,7 +50,9 @@ export function WorkoutEntrySection({
 }: WorkoutEntrySectionProps) {
   const queryClient = useQueryClient();
   const editor = useWorkoutSets();
-  const { data: activeSession } = useActiveSession();
+  const scope = useClientScope();
+  // Sessions and plans belong to the signed-in user, not to a coached client.
+  const { data: activeSession } = useActiveSession(!scope);
   const isDirty = useRef(false);
   const [isComplete, setIsComplete] = useState(false);
   const [savedLogId, setSavedLogId] = useState<string | null>(null);
@@ -78,7 +81,7 @@ export function WorkoutEntrySection({
 
   const mutation = useMutation({
     mutationFn: (sets: ExerciseSetInput[]) =>
-      createExerciseLog(exerciseSlug, sets, isCustom),
+      createExerciseLog(exerciseSlug, sets, isCustom, scope?.clientId),
     onSuccess: async (savedLog) => {
       if ('vibrate' in navigator) {
         // A longer pattern marks a new personal record.
@@ -121,6 +124,15 @@ export function WorkoutEntrySection({
         <p className="mt-0.5 text-sm text-muted-foreground">
           Ağırlık ve tekrarlarını set set gir, sonra kaydet.
         </p>
+        {scope ? (
+          <p className="mt-2 flex items-center gap-2 text-xs font-medium text-primary">
+            <span
+              aria-hidden="true"
+              className="size-1.5 rounded-full bg-primary"
+            />
+            {scope.username} adına kaydedilecek; girenin sen olduğun görünür.
+          </p>
+        ) : null}
         {activeSession ? (
           <p className="mt-2 flex items-center gap-2 text-xs font-medium text-primary">
             <span
@@ -139,7 +151,7 @@ export function WorkoutEntrySection({
                   <span className="font-mono tabular-nums text-primary">
                     {plannedRow.targetSets} × {plannedRow.targetReps}
                     {plannedRow.targetWeightKg
-                      ? ` · ${formatWeight(plannedRow.targetWeightKg)} kg`
+                      ? ` · ${formatWeightWithUnit(plannedRow.targetWeightKg)}`
                       : ''}
                   </span>
                 </p>
@@ -210,9 +222,9 @@ export function WorkoutEntrySection({
                 </p>
                 <p className="metric-number mt-0.5 text-sm text-muted-foreground">
                   <span className="font-semibold text-primary">
-                    {formatWeight(record.weightKg)} kg
+                    {formatWeightWithUnit(record.weightKg)}
                   </span>{' '}
-                  · önceki {formatWeight(record.previousKg)} kg
+                  · önceki {formatWeightWithUnit(record.previousKg)}
                 </p>
               </div>
             </m.div>

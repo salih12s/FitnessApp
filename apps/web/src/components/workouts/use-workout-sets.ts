@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 
+import { toKilograms, toWeightInput } from '@/lib/format';
 import {
   validateWorkoutSets,
   type WorkoutSetDraft,
@@ -17,10 +18,10 @@ export function useWorkoutSets(initialSets?: ExerciseLogSet[]) {
     initialSets?.length
       ? initialSets.map((set, index) => ({
           id: index + 1,
-          weightKg: set.weightKg,
+          weight: toWeightInput(set.weightKg),
           reps: String(set.reps),
         }))
-      : [{ id: 1, weightKg: '', reps: '' }],
+      : [{ id: 1, weight: '', reps: '' }],
   );
   const [errors, setErrors] = useState<Record<number, WorkoutSetErrors>>({});
 
@@ -29,15 +30,15 @@ export function useWorkoutSets(initialSets?: ExerciseLogSet[]) {
       source?.length
         ? source.map((set) => ({
             id: nextId.current++,
-            weightKg: set.weightKg,
+            weight: toWeightInput(set.weightKg),
             reps: String(set.reps),
           }))
-        : [{ id: nextId.current++, weightKg: '', reps: '' }],
+        : [{ id: nextId.current++, weight: '', reps: '' }],
     );
     setErrors({});
   }
 
-  function update(id: number, field: 'weightKg' | 'reps', value: string) {
+  function update(id: number, field: 'weight' | 'reps', value: string) {
     setSets((current) =>
       current.map((set) => (set.id === id ? { ...set, [field]: value } : set)),
     );
@@ -50,7 +51,7 @@ export function useWorkoutSets(initialSets?: ExerciseLogSet[]) {
   function add() {
     setSets((current) => [
       ...current,
-      { id: nextId.current++, weightKg: '', reps: '' },
+      { id: nextId.current++, weight: '', reps: '' },
     ]);
   }
 
@@ -69,7 +70,7 @@ export function useWorkoutSets(initialSets?: ExerciseLogSet[]) {
     return Object.keys(nextErrors).length
       ? null
       : sets.map((set) => ({
-          weightKg: set.weightKg.trim(),
+          weightKg: toKilograms(set.weight),
           reps: Number(set.reps),
         }));
   }

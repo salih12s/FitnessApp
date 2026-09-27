@@ -2,9 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import { AuthModule } from './auth/auth.module.js';
+import { CoachModule } from './coach/coach.module.js';
 import { ExerciseLogsModule } from './exercise-logs/exercise-logs.module.js';
 import { ExercisesModule } from './exercises/exercises.module.js';
+import { ExportModule } from './export/export.module.js';
 import { HealthModule } from './health/health.module.js';
+import { MeasurementsModule } from './measurements/measurements.module.js';
 import { MuscleGroupsModule } from './muscle-groups/muscle-groups.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ReportsModule } from './reports/reports.module.js';
@@ -19,9 +22,12 @@ import { TemplatesModule } from './templates/templates.module.js';
     }),
     PrismaModule,
     AuthModule,
+    CoachModule,
     HealthModule,
+    MeasurementsModule,
     MuscleGroupsModule,
     ExercisesModule,
+    ExportModule,
     ExerciseLogsModule,
     ReportsModule,
     SessionsModule,

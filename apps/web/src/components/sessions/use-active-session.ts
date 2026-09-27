@@ -2,11 +2,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { getActiveSession, sessionKeys, startSession } from '@/api/sessions';
 
-export function useActiveSession() {
+/** `enabled: false` skips the request, e.g. while a coach views a client. */
+export function useActiveSession(enabled = true) {
   return useQuery({
     queryKey: sessionKeys.active,
     queryFn: getActiveSession,
     retry: 1,
+    enabled,
   });
 }
 

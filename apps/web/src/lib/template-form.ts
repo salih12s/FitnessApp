@@ -1,13 +1,16 @@
+import { toKilograms } from './format';
+
+/** A planned exercise as typed: the weight is in the user's display unit. */
 export interface TemplateRowDraft {
   targetSets: string;
   targetReps: string;
-  targetWeightKg: string;
+  targetWeight: string;
 }
 
 export interface TemplateRowErrors {
   targetSets?: string;
   targetReps?: string;
-  targetWeightKg?: string;
+  targetWeight?: string;
 }
 
 const wholeNumber = /^\d+$/;
@@ -32,18 +35,18 @@ export function validateTemplateRow(row: TemplateRowDraft): TemplateRowErrors {
   if (!checkRange(row.targetReps, 1, 100)) {
     errors.targetReps = 'Tekrar 1 ile 100 arasında olmalı.';
   }
-  const trimmedWeight = row.targetWeightKg.trim();
+  const trimmedWeight = row.targetWeight.trim();
   if (trimmedWeight && !weight.test(trimmedWeight)) {
-    errors.targetWeightKg = 'Ağırlık 0 ile 9999,99 arasında olmalı.';
+    errors.targetWeight = 'Ağırlık 0 ile 9999,99 arasında olmalı.';
   }
 
   return errors;
 }
 
-/** Normalizes the optional weight to the API's dot-decimal string or null. */
+/** Converts the optional weight to the API's kilogram string or null. */
 export function toTargetWeight(value: string): string | null {
   const trimmed = value.trim();
-  return trimmed ? trimmed.replace(',', '.') : null;
+  return trimmed ? toKilograms(trimmed) : null;
 }
 
 interface PlannedTarget {

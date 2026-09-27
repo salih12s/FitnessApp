@@ -1,9 +1,18 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
+import {
+  Check,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react';
 
 import { deleteExerciseLog, updateExerciseLog } from '@/api/exercises';
+import { useAuth } from '@/auth/use-auth';
 import { Button } from '@/components/ui/button';
+import { useClientScope } from '@/lib/client-scope';
 import { invalidateWorkoutQueries } from '@/lib/workout-queries';
 import type { ExerciseLog, ExerciseSetInput } from '@/types/exercise';
 import { SetEditor } from './set-editor';
@@ -24,7 +33,44 @@ interface LogCardActionsProps {
   variant?: 'inline' | 'menu';
 }
 
-export function LogCardActions({
+/** Who entered a log, when it was not the athlete: "Koçun girdi: ayse". */
+function EnteredByNote({ log }: { log: ExerciseLog }) {
+  const { user } = useAuth();
+  const scope = useClientScope();
+  if (!log.enteredBy) return null;
+
+  const text = scope
+    ? log.enteredBy.id === user?.id
+      ? 'Sen girdin'
+      : `Koç girdi: ${log.enteredBy.username}`
+    : `Koçun girdi: ${log.enteredBy.username}`;
+
+  return (
+    <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+      <UserRound aria-hidden="true" className="size-3.5" />
+      {text}
+    </p>
+  );
+}
+
+export function LogCardActions(props: LogCardActionsProps) {
+  const { user } = useAuth();
+  const scope = useClientScope();
+  // A coach may change only the logs they entered for the client.
+  const canManage = !scope || props.log.enteredBy?.id === user?.id;
+
+  if (!canManage) {
+    return (
+      <div>
+        {props.summary}
+        <EnteredByNote log={props.log} />
+      </div>
+    );
+  }
+  return <ManageableLog {...props} />;
+}
+
+function ManageableLog({
   log,
   exerciseSlug,
   isCustom,
@@ -32,13 +78,15 @@ export function LogCardActions({
   variant = 'inline',
 }: LogCardActionsProps) {
   const queryClient = useQueryClient();
+  const scope = useClientScope();
   const editor = useWorkoutSets(log.sets);
   const [mode, setMode] = useState<Mode>('idle');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const refresh = () =>
     invalidateWorkoutQueries(queryClient, exerciseSlug, isCustom);
   const updateMutation = useMutation({
-    mutationFn: (sets: ExerciseSetInput[]) => updateExerciseLog(log.id, sets),
+    mutationFn: (sets: ExerciseSetInput[]) =>
+      updateExerciseLog(log.id, sets, scope?.clientId),
     onSuccess: async (updated) => {
       editor.reset(updated.sets);
       await refresh();
@@ -46,7 +94,7 @@ export function LogCardActions({
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: () => deleteExerciseLog(log.id),
+    mutationFn: () => deleteExerciseLog(log.id, scope?.clientId),
     onSuccess: async () => {
       await refresh();
       setMode('idle');
@@ -88,7 +136,10 @@ export function LogCardActions({
     <div>
       {mode !== 'edit' && variant === 'menu' ? (
         <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">{summary}</div>
+          <div className="min-w-0 flex-1">
+            {summary}
+            <EnteredByNote log={log} />
+          </div>
           <Button
             aria-expanded={isMenuOpen}
             aria-label="Kayıt işlemleri"
@@ -102,7 +153,12 @@ export function LogCardActions({
           </Button>
         </div>
       ) : null}
-      {mode !== 'edit' && variant === 'inline' ? summary : null}
+      {mode !== 'edit' && variant === 'inline' ? (
+        <>
+          {summary}
+          <EnteredByNote log={log} />
+        </>
+      ) : null}
 
       {mode === 'idle' && variant === 'menu' && isMenuOpen ? (
         <div className="mt-3">{actionButtons}</div>

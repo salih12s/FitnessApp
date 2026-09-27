@@ -22,10 +22,17 @@ export interface ExerciseLogSet {
   reps: number;
 }
 
+export interface LinkedUser {
+  id: string;
+  username: string;
+}
+
 export interface ExerciseLog {
   id: string;
   performedAt: string;
   sets: ExerciseLogSet[];
+  /** The coach who entered the log; null for the user's own logs. */
+  enteredBy: LinkedUser | null;
 }
 
 export interface CreatedExerciseLog extends ExerciseLog {

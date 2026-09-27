@@ -18,6 +18,7 @@ import { REFRESH_COOKIE_NAME } from './auth.constants.js';
 import { AuthService } from './auth.service.js';
 import type { AuthenticatedRequest, AuthResponse } from './auth.types.js';
 import { LoginDto } from './dto/login.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { RegisterDto } from './dto/register.dto.js';
 
 function readCookie(request: Request, name: string): string | undefined {
@@ -96,6 +97,42 @@ export class AuthController {
   @UseGuards(AccessTokenGuard)
   getMe(@Req() request: AuthenticatedRequest) {
     return this.authService.getCurrentUser(request.user.sub);
+  }
+
+  @Get('sessions/count')
+  @UseGuards(AccessTokenGuard)
+  async otherSessionCount(@Req() request: AuthenticatedRequest) {
+    return {
+      otherSessions: await this.authService.otherSessionCount(
+        request.user.sub,
+        readCookie(request, REFRESH_COOKIE_NAME),
+      ),
+    };
+  }
+
+  @Post('logout-others')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AccessTokenGuard)
+  logoutOthers(@Req() request: AuthenticatedRequest): Promise<void> {
+    return this.authService.logoutOthers(
+      request.user.sub,
+      readCookie(request, REFRESH_COOKIE_NAME),
+    );
+  }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AccessTokenGuard)
+  changePassword(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: ChangePasswordDto,
+  ): Promise<void> {
+    return this.authService.changePassword(
+      request.user.sub,
+      dto.currentPassword,
+      dto.newPassword,
+      readCookie(request, REFRESH_COOKIE_NAME),
+    );
   }
 
   private setRefreshCookie(response: Response, refreshToken: string): void {

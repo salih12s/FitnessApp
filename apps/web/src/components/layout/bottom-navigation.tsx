@@ -1,22 +1,30 @@
 import * as m from 'motion/react-m';
 import { Link, useLocation } from 'react-router';
 
+import { useAuth } from '@/auth/use-auth';
 import {
   isNavigationItemActive,
-  navigationItems,
+  navigationItemsFor,
 } from '@/components/layout/navigation-items';
 import { cn } from '@/lib/utils';
 
 export function BottomNavigation() {
   const { pathname } = useLocation();
+  const { user } = useAuth();
+  const items = navigationItemsFor(Boolean(user?.isCoach));
 
   return (
     <nav
       aria-label="Ana navigasyon"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden"
     >
-      <div className="mx-auto grid max-w-lg grid-cols-5 px-1 sm:px-2">
-        {navigationItems.map(({ icon: Icon, label, to }) => {
+      <div
+        className={cn(
+          'mx-auto grid max-w-lg px-1 sm:px-2',
+          items.length === 6 ? 'grid-cols-6' : 'grid-cols-5',
+        )}
+      >
+        {items.map(({ icon: Icon, label, shortLabel, to }) => {
           const isActive = isNavigationItemActive(pathname, to);
 
           return (
@@ -44,7 +52,9 @@ export function BottomNavigation() {
                 className="size-5"
                 strokeWidth={isActive ? 2.25 : 1.75}
               />
-              <span className="whitespace-nowrap">{label}</span>
+              <span className="whitespace-nowrap">
+                {items.length === 6 ? shortLabel : label}
+              </span>
             </Link>
           );
         })}

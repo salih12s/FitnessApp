@@ -28,10 +28,7 @@ export function setApiAuth(auth: ApiAuth | null): void {
   apiAuth = auth;
 }
 
-export async function apiRequest<T>(
-  path: string,
-  init: RequestInit = {},
-): Promise<T> {
+async function fetchOk(path: string, init: RequestInit): Promise<Response> {
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
     credentials: 'include',
@@ -49,6 +46,15 @@ export async function apiRequest<T>(
 
     throw new ApiError(message ?? 'İşlem tamamlanamadı.', response.status);
   }
+
+  return response;
+}
+
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const response = await fetchOk(path, init);
 
   if (response.status === 204) {
     return undefined as T;
@@ -70,14 +76,29 @@ function withAccessToken(init: RequestInit, accessToken: string | null) {
  * Sends a request with the current access token. On a 401 the token is
  * refreshed once and the request is retried.
  */
-export async function authorizedRequest<T>(
+export function authorizedRequest<T>(
   path: string,
   init: RequestInit = {},
+): Promise<T> {
+  return withTokenRefresh(path, init, apiRequest<T>);
+}
+
+/** Like authorizedRequest, for file downloads such as the CSV export. */
+export function authorizedBlob(path: string): Promise<Blob> {
+  return withTokenRefresh(path, {}, async (requestPath, init) =>
+    (await fetchOk(requestPath, init)).blob(),
+  );
+}
+
+async function withTokenRefresh<T>(
+  path: string,
+  init: RequestInit,
+  send: (path: string, init: RequestInit) => Promise<T>,
 ): Promise<T> {
   const accessToken = apiAuth?.getAccessToken() ?? null;
 
   try {
-    return await apiRequest<T>(path, withAccessToken(init, accessToken));
+    return await send(path, withAccessToken(init, accessToken));
   } catch (error) {
     if (!(error instanceof ApiError && error.status === 401) || !apiAuth) {
       throw error;
@@ -94,6 +115,6 @@ export async function authorizedRequest<T>(
       throw error;
     }
 
-    return apiRequest<T>(path, withAccessToken(init, nextToken));
+    return send(path, withAccessToken(init, nextToken));
   }
 }

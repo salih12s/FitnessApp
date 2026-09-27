@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
 
+import { useScopedAppPath } from '@/lib/client-scope';
 import { exercisePath } from '@/lib/exercise-path';
 import type { ExerciseSummary } from '@/types/exercise';
 
@@ -25,6 +26,7 @@ export function ExerciseListItem({
   isHistoryUnavailable = false,
   index = 0,
 }: ExerciseListItemProps) {
+  const appPath = useScopedAppPath();
   const historyLabel = lastPerformedAt
     ? shortDateFormatter.format(new Date(lastPerformedAt))
     : isHistoryLoading
@@ -37,7 +39,7 @@ export function ExerciseListItem({
     <Link
       className="animate-rise group flex min-h-18 items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 outline-none transition-[border-color,box-shadow] duration-200 hover:border-border-strong hover:shadow-[0_8px_20px_-16px_var(--shadow-tint)] focus-visible:ring-3 focus-visible:ring-ring active:scale-[0.99]"
       style={{ '--i': index }}
-      to={exercisePath(exercise)}
+      to={appPath(exercisePath(exercise))}
     >
       <span className="min-w-0 flex-1">
         <span className="flex min-w-0 items-center gap-2">

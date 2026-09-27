@@ -11,18 +11,31 @@ datasource db {
   provider = "mysql"
 }
 
+enum WeightUnit {
+  kg
+  lb
+}
+
 model User {
-  id               String               @id @default(uuid()) @db.Char(36)
-  username         String               @unique
-  passwordHash     String               @map("password_hash")
-  createdAt        DateTime             @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt        DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
-  exercises        Exercise[]           @relation("CustomExerciseOwner")
-  exerciseLogs     ExerciseLog[]
-  exercisePrefs    ExercisePreference[]
-  refreshSessions  RefreshSession[]
-  workoutSessions  WorkoutSession[]
-  workoutTemplates WorkoutTemplate[]
+  id                String               @id @default(uuid()) @db.Char(36)
+  username          String               @unique
+  passwordHash      String               @map("password_hash")
+  weightUnit        WeightUnit           @default(kg) @map("weight_unit")
+  isCoach           Boolean              @default(false) @map("is_coach")
+  coachInviteCode   String?              @unique @map("coach_invite_code") @db.VarChar(16)
+  createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
+  exercises         Exercise[]           @relation("CustomExerciseOwner")
+  exerciseLogs      ExerciseLog[]
+  exercisePrefs     ExercisePreference[]
+  refreshSessions   RefreshSession[]
+  workoutSessions   WorkoutSession[]
+  workoutTemplates  WorkoutTemplate[]
+  bodyMeasurements  BodyMeasurement[]
+  coachLinks        CoachClient[]        @relation("CoachLinks")
+  clientLinks       CoachClient[]        @relation("ClientLinks")
+  enteredLogs       ExerciseLog[]        @relation("LogEnteredBy")
+  assignedTemplates WorkoutTemplate[]    @relation("TemplateAssignedBy")
 
   @@map("users")
 }
@@ -96,24 +109,28 @@ model ExercisePreference {
 }
 
 model ExerciseLog {
-  id           String          @id @default(uuid()) @db.Char(36)
-  userId       String          @map("user_id") @db.Char(36)
-  exerciseId   String          @map("exercise_id") @db.Char(36)
-  sessionId    String?         @map("session_id") @db.Char(36)
-  performedAt  DateTime        @default(now()) @map("performed_at") @db.DateTime(3)
-  notes        String?         @db.Text
-  createdAt    DateTime        @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt    DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
-  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  exercise     Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  session      WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  exerciseSets ExerciseSet[]
+  id              String          @id @default(uuid()) @db.Char(36)
+  userId          String          @map("user_id") @db.Char(36)
+  exerciseId      String          @map("exercise_id") @db.Char(36)
+  sessionId       String?         @map("session_id") @db.Char(36)
+  /// Set when a coach entered the log for this user; null for own logs.
+  enteredByUserId String?         @map("entered_by_user_id") @db.Char(36)
+  performedAt     DateTime        @default(now()) @map("performed_at") @db.DateTime(3)
+  notes           String?         @db.Text
+  createdAt       DateTime        @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt       DateTime        @updatedAt @map("updated_at") @db.DateTime(3)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  exercise        Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  session         WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  enteredBy       User?           @relation("LogEnteredBy", fields: [enteredByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  exerciseSets    ExerciseSet[]
 
   @@index([userId, performedAt(sort: Desc)])
   @@index([userId, exerciseId, performedAt(sort: Desc)])
   @@index([exerciseId, performedAt(sort: Desc)])
   @@index([performedAt])
   @@index([sessionId])
+  @@index([enteredByUserId])
   @@map("exercise_logs")
 }
 
@@ -140,17 +157,21 @@ model WorkoutSession {
 /// A reusable workout plan. `scheduledDays` is a weekday bitmask
 /// (Monday = 1, Tuesday = 2, ... Sunday = 64) used by the calendar.
 model WorkoutTemplate {
-  id            String             @id @default(uuid()) @db.Char(36)
-  userId        String             @map("user_id") @db.Char(36)
-  name          String             @db.VarChar(80)
-  scheduledDays Int                @default(0) @map("scheduled_days")
-  createdAt     DateTime           @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt     DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
-  user          User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  exercises     TemplateExercise[]
-  sessions      WorkoutSession[]
+  id               String             @id @default(uuid()) @db.Char(36)
+  userId           String             @map("user_id") @db.Char(36)
+  name             String             @db.VarChar(80)
+  scheduledDays    Int                @default(0) @map("scheduled_days")
+  /// The coach who assigned (copied) this template to the user, if any.
+  assignedByUserId String?            @map("assigned_by_user_id") @db.Char(36)
+  createdAt        DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.DateTime(3)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  assignedBy       User?              @relation("TemplateAssignedBy", fields: [assignedByUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  exercises        TemplateExercise[]
+  sessions         WorkoutSession[]
 
   @@index([userId])
+  @@index([assignedByUserId])
   @@map("workout_templates")
 }
 
@@ -184,4 +205,37 @@ model ExerciseSet {
 
   @@unique([exerciseLogId, setNumber])
   @@map("exercise_sets")
+}
+
+model BodyMeasurement {
+  id             String   @id @default(uuid()) @db.Char(36)
+  userId         String   @map("user_id") @db.Char(36)
+  measuredAt     DateTime @map("measured_at") @db.Date
+  weightKg       Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  bodyFatPercent Decimal? @map("body_fat_percent") @db.Decimal(4, 1)
+  waistCm        Decimal? @map("waist_cm") @db.Decimal(5, 1)
+  chestCm        Decimal? @map("chest_cm") @db.Decimal(5, 1)
+  armCm          Decimal? @map("arm_cm") @db.Decimal(5, 1)
+  note           String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userId, measuredAt(sort: Desc)])
+  @@map("body_measurements")
+}
+
+/// Permission for a coach to view a client's data and enter logs for them.
+/// Links are not history, so they go with either account.
+model CoachClient {
+  id        String   @id @default(uuid()) @db.Char(36)
+  coachId   String   @map("coach_id") @db.Char(36)
+  clientId  String   @map("client_id") @db.Char(36)
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  coach     User     @relation("CoachLinks", fields: [coachId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  client    User     @relation("ClientLinks", fields: [clientId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([coachId, clientId])
+  @@index([clientId])
+  @@map("coach_clients")
 }

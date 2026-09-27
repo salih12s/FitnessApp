@@ -8,5 +8,6 @@ import { ReportsService } from './reports.service.js';
   imports: [AuthModule],
   controllers: [ReportsController],
   providers: [ReportsService],
+  exports: [ReportsService],
 })
 export class ReportsModule {}

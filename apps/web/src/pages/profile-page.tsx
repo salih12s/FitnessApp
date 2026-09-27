@@ -1,70 +1,105 @@
+import { useMutation } from '@tanstack/react-query';
+import { LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
-import { LogOut, Monitor, Moon, Sun, type LucideIcon } from 'lucide-react';
-import * as m from 'motion/react-m';
 
+import { updateWeightUnit } from '@/api/account';
 import { getAuthErrorMessage } from '@/auth/auth-api';
 import { useAuth } from '@/auth/use-auth';
 import { PageHeader } from '@/components/common/page-header';
+import {
+  SegmentedControl,
+  type SegmentedOption,
+} from '@/components/common/segmented-control';
 import { UserBadge } from '@/components/common/user-badge';
+import { CoachingSection } from '@/components/profile/coaching-section';
+import { DataSection } from '@/components/profile/data-section';
+import { MeasurementsSection } from '@/components/profile/measurements-section';
+import { SecuritySection } from '@/components/profile/security-section';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import type { WeightUnit } from '@/lib/format';
 import {
   getThemePreference,
   setThemePreference,
   type ThemePreference,
 } from '@/lib/theme';
 
-const themeOptions: readonly [ThemePreference, string, LucideIcon][] = [
-  ['system', 'Sistem', Monitor],
-  ['light', 'Açık', Sun],
-  ['dark', 'Koyu', Moon],
+const themeOptions: readonly SegmentedOption<ThemePreference>[] = [
+  { value: 'system', label: 'Sistem', icon: Monitor },
+  { value: 'light', label: 'Açık', icon: Sun },
+  { value: 'dark', label: 'Koyu', icon: Moon },
 ];
 
-function ThemeSelector() {
-  const [preference, setPreference] = useState(getThemePreference);
+const unitOptions: readonly SegmentedOption<WeightUnit>[] = [
+  { value: 'kg', label: 'Kilogram' },
+  { value: 'lb', label: 'Pound' },
+];
 
-  function choose(nextPreference: ThemePreference) {
-    setPreference(nextPreference);
-    setThemePreference(nextPreference);
-  }
+function PreferencesSection() {
+  const { updateUser, user } = useAuth();
+  const [theme, setTheme] = useState(getThemePreference);
+  const unitMutation = useMutation({
+    mutationFn: updateWeightUnit,
+    onSuccess: updateUser,
+  });
 
   return (
-    <div
-      aria-label="Tema"
-      className="grid grid-cols-3 rounded-md bg-surface-strong p-1"
-      role="radiogroup"
+    <section
+      aria-labelledby="preferences-title"
+      className="animate-rise mt-3 rounded-lg border border-border bg-surface p-4 sm:p-5"
+      style={{ '--i': 4 }}
     >
-      {themeOptions.map(([value, label, Icon]) => {
-        const isSelected = preference === value;
-
-        return (
-          <button
-            aria-checked={isSelected}
-            className={cn(
-              'relative flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-sm px-3 text-sm outline-none transition-colors duration-200 focus-visible:ring-3 focus-visible:ring-ring',
-              isSelected
-                ? 'font-semibold text-foreground'
-                : 'font-medium text-muted-foreground hover:text-foreground',
-            )}
-            key={value}
-            onClick={() => choose(value)}
-            role="radio"
-            type="button"
+      <h2
+        className="text-lg font-semibold leading-tight text-foreground"
+        id="preferences-title"
+      >
+        Tercihler
+      </h2>
+      <div className="mt-4 grid gap-5 sm:grid-cols-2">
+        <div>
+          <p className="text-sm font-medium text-foreground">Tema</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Sistem seçiliyken telefonunun ayarını izler.
+          </p>
+          <SegmentedControl
+            className="mt-2"
+            label="Tema"
+            layoutId="theme-indicator"
+            onChange={(value) => {
+              setTheme(value);
+              setThemePreference(value);
+            }}
+            options={themeOptions}
+            value={theme}
+          />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">Ağırlık birimi</p>
+          <p
+            aria-live="polite"
+            className="mt-0.5 text-xs text-muted-foreground"
           >
-            {isSelected ? (
-              <m.span
-                aria-hidden="true"
-                className="absolute inset-0 rounded-sm bg-surface shadow-[0_1px_2px_var(--shadow-tint)]"
-                layoutId="theme-indicator"
-                transition={{ type: 'spring', stiffness: 520, damping: 40 }}
-              />
-            ) : null}
-            <Icon aria-hidden="true" className="relative size-4" />
-            <span className="relative">{label}</span>
-          </button>
-        );
-      })}
-    </div>
+            {unitMutation.isError
+              ? 'Birim kaydedilemedi. Yeniden deneyebilirsin.'
+              : 'Tüm ağırlıklar bu birimle gösterilir.'}
+          </p>
+          <SegmentedControl
+            className="mt-2"
+            disabled={unitMutation.isPending}
+            label="Ağırlık birimi"
+            layoutId="unit-indicator"
+            onChange={(value) => {
+              if (value !== user?.weightUnit) unitMutation.mutate(value);
+            }}
+            options={unitOptions}
+            value={
+              unitMutation.isPending
+                ? unitMutation.variables
+                : (user?.weightUnit ?? 'kg')
+            }
+          />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -86,9 +121,9 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <PageHeader
-        description="Hesap bilgilerini ve görünüm tercihini yönet."
+        description="Hesabını, ölçümlerini ve tercihlerini yönet."
         title="Profil"
       />
 
@@ -100,16 +135,25 @@ export function ProfilePage() {
         <h2 className="sr-only" id="account-title">
           Hesap
         </h2>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {user ? (
             <UserBadge className="size-11 text-sm" username={user.username} />
           ) : null}
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-base font-semibold text-foreground">
               {user?.username}
             </p>
             <p className="text-xs text-muted-foreground">Kullanıcı adı</p>
           </div>
+          <Button
+            className="w-full sm:w-auto"
+            disabled={isLoggingOut}
+            onClick={handleLogout}
+            variant="secondary"
+          >
+            <LogOut aria-hidden="true" className="size-4" />
+            {isLoggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+          </Button>
         </div>
 
         {error ? (
@@ -121,36 +165,13 @@ export function ProfilePage() {
             {error}
           </p>
         ) : null}
-
-        <Button
-          className="mt-5 w-full sm:w-auto"
-          disabled={isLoggingOut}
-          onClick={handleLogout}
-          variant="secondary"
-        >
-          <LogOut aria-hidden="true" className="size-4" />
-          {isLoggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-        </Button>
       </section>
 
-      <section
-        aria-labelledby="appearance-title"
-        className="animate-rise mt-3 rounded-lg border border-border bg-surface p-4 sm:p-5"
-        style={{ '--i': 3 }}
-      >
-        <h2
-          className="text-base font-semibold text-foreground"
-          id="appearance-title"
-        >
-          Görünüm
-        </h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Sistem seçiliyken tema telefonunun ayarını izler.
-        </p>
-        <div className="mt-4 sm:max-w-sm">
-          <ThemeSelector />
-        </div>
-      </section>
+      <MeasurementsSection />
+      <PreferencesSection />
+      <CoachingSection />
+      <SecuritySection />
+      <DataSection />
     </div>
   );
 }

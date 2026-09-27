@@ -1,4 +1,4 @@
-import type { ExerciseLogSet, MuscleReference } from './exercise';
+import type { ExerciseLog, MuscleReference } from './exercise';
 import type { HistorySession } from './session';
 
 export interface HistoryExercise {
@@ -8,10 +8,7 @@ export interface HistoryExercise {
   isCustom: boolean;
 }
 
-export interface HistoryLog {
-  id: string;
-  performedAt: string;
-  sets: ExerciseLogSet[];
+export interface HistoryLog extends ExerciseLog {
   exercise: HistoryExercise;
   session: HistorySession | null;
 }
