@@ -2,7 +2,7 @@
   "name": "fitness-app",
   "version": "0.1.0",
   "private": true,
-  "description": "A production-minded fitness tracking application foundation.",
+  "description": "Mobile-first strength training log with per-set tracking, progress reports, and a coach mode (React, NestJS, Prisma, MariaDB).",
   "workspaces": [
     "apps/*"
   ],
