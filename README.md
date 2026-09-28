@@ -42,7 +42,7 @@
 - Koç modu açıktır. İki danışanın vardır: biri koçun atadığı programla çalışıyor ve bazı antrenmanlarını koç girmiş, diğeri kendi programını izliyor.
 - Hesap 24 saat sonra kendiliğinden silinir.
 
-Aşağıdaki diğer görseller, sentetik demo verisiyle yerelde çalışan uygulamadan alındı.
+Aşağıdaki GIF'ler de canlı sitede demo hesabıyla, ekran görüntüleri ise sentetik veriyle yerelde çalışan uygulamada alındı.
 
 ## Neden FitnessApp
 
@@ -317,7 +317,7 @@ Yerel veritabanı yardımcısı, bütün komutlar ve Hostinger'a dağıtım adı
 - **Logo:** Bu proje için SVG olarak elle çizildi ([logo.svg](docs/media/logo.svg)).
 - **İkonlar:** [Lucide](https://lucide.dev) (ISC lisansı).
 - **Fotoğraf:** Kullanılmadı.
-- **Demo verisi:** Ekran görüntüleri ve GIF'ler yerelde çalışan uygulamadan, "Canlı demo" kaydı canlı siteden Playwright ile alındı. `deniz`, `ada` ve `koc_emre` hesapları, canlı demonun `demo_…`, `ada_…` ve `deniz_…` hesapları ve bütün antrenman, ölçüm ve program verileri sentetiktir; gerçek kişilere ait değildir.
+- **Demo verisi:** GIF'ler canlı sitede demo hesaplarıyla, ekran görüntüleri yerelde çalışan uygulamada Playwright ile alındı. GIF'ler Chrome'un ekran akışından kayıpsız karelerle kaydedildi ve hareketli bölümler 20 fps oynar. `deniz`, `ada` ve `koc_emre` hesapları, canlı demonun `demo_…`, `ada_…` ve `deniz_…` hesapları ve bütün antrenman, ölçüm ve program verileri sentetiktir; gerçek kişilere ait değildir.
 
 ## Geliştiren
 
