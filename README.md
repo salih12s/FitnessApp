@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="#canlı-demo">Canlı demo</a> ·
   <a href="#neden-fitnessapp">Neden</a> ·
   <a href="#özellikler">Özellikler</a> ·
   <a href="#açık-ve-koyu-tema-mobil-görünüm">Tema ve mobil</a> ·
@@ -27,7 +28,21 @@
   <a href="#geliştiren">İletişim</a>
 </p>
 
-> Canlı demo henüz yok. Uygulamayı birkaç komutla yerelde çalıştırabilirsin, bkz. [Yerelde çalıştırma](#yerelde-çalıştırma). Aşağıdaki bütün görseller, sentetik demo verisiyle yerelde çalışan uygulamadan alındı.
+## Canlı demo
+
+<p align="center">
+  <img src="docs/media/live-demo.gif" alt="Canlı sitede demo hesabıyla giriş, ana sayfa, raporlar, danışan çalışma alanı ve programlar" width="320">
+  <br><sub>Demo hesabıyla giriş → ana sayfa → raporlar → danışan çalışma alanı → programlar. Kayıt canlı siteden alındı (<a href="docs/media/live-demo.mp4">MP4</a>).</sub>
+</p>
+
+**[fitnessapp.salihsydm.com](https://fitnessapp.salihsydm.com)** adresinde giriş ekranındaki **Demo hesabıyla dene**'ye bas:
+
+- Kayıt gerekmez. Her ziyaretçiye ayrı bir hesap açılır; başkasının yaptığı değişiklik seninkini etkilemez.
+- Hesap dolu gelir: 12 haftalık itiş / çekiş / bacak geçmişi, kişisel rekorlar, dört program, bir özel hareket ve haftalık vücut ölçümleri.
+- Koç modu açıktır. İki danışanın vardır: biri koçun atadığı programla çalışıyor ve bazı antrenmanlarını koç girmiş, diğeri kendi programını izliyor.
+- Hesap 24 saat sonra kendiliğinden silinir.
+
+Aşağıdaki diğer görseller, sentetik demo verisiyle yerelde çalışan uygulamadan alındı.
 
 ## Neden FitnessApp
 
@@ -213,16 +228,18 @@ Tasarım dili "Precision": soğuk grafit tonlar, tek bir turuncu vurgu ve sayıl
 
 **Koç görünümü mevcut ekranları kullanır.** Danışan çalışma alanı yeni sayfalar yazmak yerine Raporlar, Antrenmanlar ve hareket sayfalarını bir "danışan kapsamı" içinde çalıştırır. Kapsam, isteklerin danışan uç noktalarına gitmesini sağlar; danışanın verisi ayrı bir sorgu önbelleğinde tutulduğu için koçun kendi verisiyle karışmaz ([client-scope.ts](apps/web/src/lib/client-scope.ts), [client-workspace.tsx](apps/web/src/pages/client-workspace.tsx)).
 
+**Demo hesabı ziyaretçiye özel.** Herkesin aynı demo hesabını kullanması kolay olurdu, ama bir ziyaretçinin şifreyi değiştirmesi ya da kayıtları silmesi demoyu herkes için bozardı. Bunun yerine `POST /api/auth/demo` her tıklamada tek bir transaction içinde bir koç ve iki danışan oluşturur. Antrenman, program ve ölçüm verisi saf fonksiyonlarla, verilen saat ve tohumlu rastgele sayı üreteciyle üretilir; hafta hafta artan ağırlıklar raporlarda gerçekçi rekorlar ve eğilimler çıkarır ([demo-data.ts](apps/api/src/demo/demo-data.ts)). Hesapların şifresi rastgeledir ve kimse bilmez; bu yüzden profilde şifre değiştirme ve hesap silme bölümleri gizlenir. Demo kullanıcıları `users.is_demo` ile işaretlenir; 24 saati geçenler ve 300 sınırını aşan en eskiler, bir sonraki demo açılırken hesap silme akışının aynı adımlarıyla temizlenir ([demo.service.ts](apps/api/src/demo/demo.service.ts)).
+
 **Tek süreç, tek dağıtım.** Üretimde NestJS, derlenmiş web uygulamasını da sunar; paylaşımlı Node.js hosting'de tek bir uygulama yeterlidir ([main.ts](apps/api/src/main.ts), [package-hostinger.mjs](scripts/package-hostinger.mjs)).
 
 ### Bilinen sınırlar
 
 - **API'de otomatik test yok.** Web tarafında 16 dosyada 53 birim testi var (doğrulama, birim dönüşümü, gruplama, takvim, dinlenme sayacı gibi saf mantık). API davranışı geliştirme sırasında elle yazılmış istek betikleriyle denendi; bu betikler repoda değil.
 - **Uçtan uca test yok.** Ekranlar Playwright ile tarayıcıda kontrol edildi, ama bu kontroller de repoya eklenmedi.
-- **Giriş denemelerine hız sınırı yok**; şifre sıfırlama ve e-posta doğrulama yok.
+- **Giriş denemelerine ve demo açmaya hız sınırı yok**; şifre sıfırlama ve e-posta doğrulama yok. Demo kullanıcılarının toplamı 300 ile sınırlı.
+- **Aynı anda iki sekmede oturum yenilemesi çakışabilir.** Yenileme token'ı her kullanımda değiştiği için, iki sekme aynı anda yenileme isterse biri 401 alır ve o sekmede giriş ekranına düşer. Sayfayı yenilemek oturumu geri getirir.
 - **Çevrimdışı kayıt yok.** Uygulama PWA olarak yüklenir ama kayıt için bağlantı gerekir.
 - **Arayüz yalnızca Türkçe.**
-- **Canlı demo yok.**
 - **Koç yorumları henüz yok.** Koç kayıtlara not bırakamaz; sıradaki işler [docs/roadmap.md](docs/roadmap.md) içinde.
 
 ## Teknoloji
@@ -300,7 +317,7 @@ Yerel veritabanı yardımcısı, bütün komutlar ve Hostinger'a dağıtım adı
 - **Logo:** Bu proje için SVG olarak elle çizildi ([logo.svg](docs/media/logo.svg)).
 - **İkonlar:** [Lucide](https://lucide.dev) (ISC lisansı).
 - **Fotoğraf:** Kullanılmadı.
-- **Demo verisi:** Ekran görüntüleri ve GIF'ler yerelde çalışan uygulamadan Playwright ile alındı. `deniz`, `ada` ve `koc_emre` hesapları ve bütün antrenman, ölçüm ve program verileri sentetiktir; gerçek kişilere ait değildir.
+- **Demo verisi:** Ekran görüntüleri ve GIF'ler yerelde çalışan uygulamadan, "Canlı demo" kaydı canlı siteden Playwright ile alındı. `deniz`, `ada` ve `koc_emre` hesapları, canlı demonun `demo_…`, `ada_…` ve `deniz_…` hesapları ve bütün antrenman, ölçüm ve program verileri sentetiktir; gerçek kişilere ait değildir.
 
 ## Geliştiren
 
@@ -316,4 +333,6 @@ Yerel veritabanı yardımcısı, bütün komutlar ve Hostinger'a dağıtım adı
 
 **FitnessApp** is a mobile-first strength training log for gym-goers and the coaches who follow them remotely. Each exercise is logged set by set (weight × reps); the entry form opens pre-filled with the previous workout, new personal records are detected on save, and a rest timer keeps correct time in the background. Workout sessions, reusable programs with a plan checklist, a training calendar, and reports (7-day summary, muscle-group heat map, estimated 1RM and volume charts) sit on top of that history. A coach mode lets any user invite clients with a code, view their history and reports, log workouts on their behalf (marked as coach-entered, editable only by the coach who entered them), and assign programs. Accounts include body measurements, kg/lb display, CSV export, session management, and confirmed account deletion.
 
-Built with React 19, TypeScript, Vite, TanStack Query, and Tailwind CSS on the client, and NestJS with Prisma on MariaDB/MySQL on the server. Notable decisions: exact decimal weights with integer arithmetic for totals, argon2id password hashing with rotating hashed refresh tokens in `HttpOnly` cookies, per-user ownership on every query (404 for foreign records), a row lock that guarantees one active session per user, and history-preserving foreign keys. Known gaps: no automated API or end-to-end tests yet (53 client unit tests), no login rate limiting, no offline logging, and Turkish-only UI. See [Yerelde çalıştırma](#yerelde-çalıştırma) to run it locally.
+Built with React 19, TypeScript, Vite, TanStack Query, and Tailwind CSS on the client, and NestJS with Prisma on MariaDB/MySQL on the server. Notable decisions: exact decimal weights with integer arithmetic for totals, argon2id password hashing with rotating hashed refresh tokens in `HttpOnly` cookies, per-user ownership on every query (404 for foreign records), a row lock that guarantees one active session per user, and history-preserving foreign keys. Known gaps: no automated API or end-to-end tests yet (53 client unit tests), no login rate limiting, no offline logging, and Turkish-only UI.
+
+**Live demo:** [fitnessapp.salihsydm.com](https://fitnessapp.salihsydm.com). Press **Demo hesabıyla dene** on the sign-in screen to get a private sample account (a coach with twelve weeks of training, programs, measurements and two clients) that is deleted after 24 hours. See [Yerelde çalıştırma](#yerelde-çalıştırma) to run it locally.

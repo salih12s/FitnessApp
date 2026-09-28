@@ -5,6 +5,8 @@ export interface AuthUser {
   username: string;
   weightUnit: WeightUnit;
   isCoach: boolean;
+  /** A sample account from "Demo hesabıyla dene", removed after a day. */
+  isDemo: boolean;
   createdAt: string;
 }
 

@@ -23,6 +23,8 @@ model User {
   weightUnit        WeightUnit           @default(kg) @map("weight_unit")
   isCoach           Boolean              @default(false) @map("is_coach")
   coachInviteCode   String?              @unique @map("coach_invite_code") @db.VarChar(16)
+  /// Sample account created by "Demo ile dene"; removed after a day.
+  isDemo            Boolean              @default(false) @map("is_demo")
   createdAt         DateTime             @default(now()) @map("created_at") @db.DateTime(3)
   updatedAt         DateTime             @updatedAt @map("updated_at") @db.DateTime(3)
   exercises         Exercise[]           @relation("CustomExerciseOwner")
@@ -37,6 +39,7 @@ model User {
   enteredLogs       ExerciseLog[]        @relation("LogEnteredBy")
   assignedTemplates WorkoutTemplate[]    @relation("TemplateAssignedBy")
 
+  @@index([isDemo, createdAt])
   @@map("users")
 }
 

@@ -143,7 +143,11 @@ export function ProfilePage() {
             <p className="truncate text-base font-semibold text-foreground">
               {user?.username}
             </p>
-            <p className="text-xs text-muted-foreground">Kullanıcı adı</p>
+            <p className="text-xs text-muted-foreground">
+              {user?.isDemo
+                ? 'Demo hesabı · 24 saat sonra silinir'
+                : 'Kullanıcı adı'}
+            </p>
           </div>
           <Button
             className="w-full sm:w-auto"
@@ -170,7 +174,8 @@ export function ProfilePage() {
       <MeasurementsSection />
       <PreferencesSection />
       <CoachingSection />
-      <SecuritySection />
+      {/* Demo accounts have no known password to change. */}
+      {user?.isDemo ? null : <SecuritySection />}
       <DataSection />
     </div>
   );

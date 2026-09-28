@@ -8,6 +8,7 @@ export interface AuthContextValue {
   login: (credentials: AuthCredentials) => Promise<void>;
   logout: () => Promise<void>;
   register: (credentials: AuthCredentials) => Promise<void>;
+  startDemo: () => Promise<void>;
   /** Replaces the signed-in user's profile after the server changed it. */
   updateUser: (user: AuthUser) => void;
   /** Signs out locally after the server already ended the session. */

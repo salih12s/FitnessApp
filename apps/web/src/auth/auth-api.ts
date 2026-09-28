@@ -20,6 +20,11 @@ export function registerRequest(
   });
 }
 
+/** Creates a private sample account filled with data and signs in to it. */
+export function demoRequest(): Promise<AuthSession> {
+  return apiRequest('/auth/demo', { method: 'POST' });
+}
+
 let pendingRefresh: Promise<AuthSession> | null = null;
 
 export function refreshRequest(): Promise<AuthSession> {

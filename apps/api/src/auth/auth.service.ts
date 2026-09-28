@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as argon2 from 'argon2';
 
+import { DemoService } from '../demo/demo.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PublicUser } from '../users/user.types.js';
 import { UsersService } from '../users/users.service.js';
@@ -21,6 +22,7 @@ import type {
 export class AuthService {
   constructor(
     private readonly authConfig: AuthConfig,
+    private readonly demo: DemoService,
     private readonly jwt: JwtService,
     private readonly prisma: PrismaService,
     private readonly users: UsersService,
@@ -37,6 +39,11 @@ export class AuthService {
     );
 
     return this.createSession(user);
+  }
+
+  /** Signs the visitor in to a fresh sample account of their own. */
+  async startDemo(): Promise<SessionAuthResult> {
+    return this.createSession(await this.demo.createAccount());
   }
 
   async login(username: string, password: string): Promise<SessionAuthResult> {
@@ -56,6 +63,7 @@ export class AuthService {
       username: user.username,
       weightUnit: user.weightUnit,
       isCoach: user.isCoach,
+      isDemo: user.isDemo,
       createdAt: user.createdAt,
     });
   }
@@ -73,6 +81,7 @@ export class AuthService {
             username: true,
             weightUnit: true,
             isCoach: true,
+            isDemo: true,
             createdAt: true,
           },
         },

@@ -127,6 +127,7 @@ function DeleteAccountForm({ onCancel }: { onCancel: () => void }) {
 }
 
 export function DataSection() {
+  const { user } = useAuth();
   const [isDeleting, setIsDeleting] = useState(false);
 
   return (
@@ -142,24 +143,27 @@ export function DataSection() {
       />
       <ExportButton className="mt-4" />
 
-      <div className="mt-5 border-t border-border pt-4">
-        <p className="text-sm font-semibold text-foreground">Hesabı sil</p>
-        <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
-          Hesabını ve tüm verilerini kalıcı olarak kaldırır.
-        </p>
-        {isDeleting ? (
-          <DeleteAccountForm onCancel={() => setIsDeleting(false)} />
-        ) : (
-          <Button
-            className="mt-3 w-full text-destructive hover:border-destructive/40 sm:w-auto"
-            onClick={() => setIsDeleting(true)}
-            variant="secondary"
-          >
-            <Trash2 aria-hidden="true" className="size-4" />
-            Hesabımı sil
-          </Button>
-        )}
-      </div>
+      {/* Demo accounts are removed automatically and have no known password. */}
+      {user?.isDemo ? null : (
+        <div className="mt-5 border-t border-border pt-4">
+          <p className="text-sm font-semibold text-foreground">Hesabı sil</p>
+          <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+            Hesabını ve tüm verilerini kalıcı olarak kaldırır.
+          </p>
+          {isDeleting ? (
+            <DeleteAccountForm onCancel={() => setIsDeleting(false)} />
+          ) : (
+            <Button
+              className="mt-3 w-full text-destructive hover:border-destructive/40 sm:w-auto"
+              onClick={() => setIsDeleting(true)}
+              variant="secondary"
+            >
+              <Trash2 aria-hidden="true" className="size-4" />
+              Hesabımı sil
+            </Button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

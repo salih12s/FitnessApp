@@ -64,6 +64,17 @@ export class AuthController {
     return result.response;
   }
 
+  @Post('demo')
+  @HttpCode(HttpStatus.OK)
+  async demo(
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthResponse> {
+    const result = await this.authService.startDemo();
+    this.setRefreshCookie(response, result.refreshToken);
+
+    return result.response;
+  }
+
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(

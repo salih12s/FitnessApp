@@ -3,6 +3,7 @@ export interface PublicUser {
   username: string;
   weightUnit: 'kg' | 'lb';
   isCoach: boolean;
+  isDemo: boolean;
   createdAt: Date;
 }
 

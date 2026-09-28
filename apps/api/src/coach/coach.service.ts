@@ -38,7 +38,7 @@ export interface InvitePreviewResponse {
   alreadyLinked: boolean;
 }
 
-function generateInviteCode(): string {
+export function generateInviteCode(): string {
   return Array.from(
     { length: INVITE_LENGTH },
     () => INVITE_ALPHABET[randomInt(INVITE_ALPHABET.length)],

@@ -12,6 +12,7 @@ import { ApiError, setApiAuth } from '@/lib/api';
 import { setWeightUnit } from '@/lib/format';
 
 import {
+  demoRequest,
   loginRequest,
   logoutRequest,
   refreshRequest,
@@ -102,6 +103,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [applySession],
   );
 
+  const startDemo = useCallback(async () => {
+    applySession(await demoRequest());
+  }, [applySession]);
+
   const logout = useCallback(async () => {
     await logoutRequest();
     applySession(null);
@@ -125,10 +130,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       register,
+      startDemo,
       updateUser,
       clearSession,
     }),
-    [clearSession, login, logout, register, session, status, updateUser],
+    [
+      clearSession,
+      login,
+      logout,
+      register,
+      session,
+      startDemo,
+      status,
+      updateUser,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,11 +10,12 @@ import { Prisma, type WeightUnit } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { PublicUser, UserCredentials } from './user.types.js';
 
-const publicUserSelect = {
+export const publicUserSelect = {
   id: true,
   username: true,
   weightUnit: true,
   isCoach: true,
+  isDemo: true,
   createdAt: true,
 } as const;
 
@@ -90,16 +91,28 @@ export class UsersService {
         throw new ForbiddenException('Current password is incorrect.');
       }
 
-      await transaction.exerciseLog.deleteMany({ where: { userId } });
-      await transaction.workoutSession.deleteMany({ where: { userId } });
-      await transaction.workoutTemplate.deleteMany({ where: { userId } });
-      await transaction.bodyMeasurement.deleteMany({ where: { userId } });
-      await transaction.exercisePreference.deleteMany({ where: { userId } });
-      await transaction.refreshSession.deleteMany({ where: { userId } });
-      await transaction.exercise.deleteMany({
-        where: { createdByUserId: userId },
-      });
-      await transaction.user.delete({ where: { id: userId } });
+      await this.deleteUsers(transaction, [userId]);
     });
+  }
+
+  /**
+   * Deletes the users and everything they own, in foreign-key order. Logs go
+   * first so custom exercises are no longer referenced when they are removed.
+   */
+  async deleteUsers(
+    transaction: Prisma.TransactionClient,
+    userIds: string[],
+  ): Promise<void> {
+    const userId = { in: userIds };
+    await transaction.exerciseLog.deleteMany({ where: { userId } });
+    await transaction.workoutSession.deleteMany({ where: { userId } });
+    await transaction.workoutTemplate.deleteMany({ where: { userId } });
+    await transaction.bodyMeasurement.deleteMany({ where: { userId } });
+    await transaction.exercisePreference.deleteMany({ where: { userId } });
+    await transaction.refreshSession.deleteMany({ where: { userId } });
+    await transaction.exercise.deleteMany({
+      where: { createdByUserId: userId },
+    });
+    await transaction.user.deleteMany({ where: { id: userId } });
   }
 }
