@@ -13,6 +13,7 @@ import { JoinPage } from '@/pages/join-page';
 import { LoginPage } from '@/pages/login-page';
 import { MuscleGroupPage } from '@/pages/muscle-group-page';
 import { MuscleGroupsPage } from '@/pages/muscle-groups-page';
+import { NutritionPage } from '@/pages/nutrition-page';
 import { ProfilePage } from '@/pages/profile-page';
 import { ProgramEditorPage } from '@/pages/program-editor-page';
 import { ProgramsPage } from '@/pages/programs-page';
@@ -34,6 +35,7 @@ function App() {
           <Route path="programs" element={<ProgramsPage />} />
           <Route path="programs/new" element={<ProgramEditorPage />} />
           <Route path="programs/:id" element={<ProgramEditorPage />} />
+          <Route path="nutrition" element={<NutritionPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="join/:code" element={<JoinPage />} />

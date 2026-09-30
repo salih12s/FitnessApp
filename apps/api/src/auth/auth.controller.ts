@@ -10,11 +10,12 @@ import {
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 
 import { AccessTokenGuard } from './access-token.guard.js';
 import { AuthConfig } from './auth.config.js';
-import { REFRESH_COOKIE_NAME } from './auth.constants.js';
+import { AUTH_THROTTLE, REFRESH_COOKIE_NAME } from './auth.constants.js';
 import { AuthService } from './auth.service.js';
 import type { AuthenticatedRequest, AuthResponse } from './auth.types.js';
 import { LoginDto } from './dto/login.dto.js';
@@ -42,6 +43,7 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @Throttle({ default: AUTH_THROTTLE.register })
   async register(
     @Body() dto: RegisterDto,
     @Res({ passthrough: true }) response: Response,
@@ -53,6 +55,7 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: AUTH_THROTTLE.login })
   @HttpCode(HttpStatus.OK)
   async login(
     @Body() dto: LoginDto,
@@ -65,6 +68,7 @@ export class AuthController {
   }
 
   @Post('demo')
+  @Throttle({ default: AUTH_THROTTLE.demo })
   @HttpCode(HttpStatus.OK)
   async demo(
     @Res({ passthrough: true }) response: Response,
@@ -76,6 +80,7 @@ export class AuthController {
   }
 
   @Post('refresh')
+  @Throttle({ default: AUTH_THROTTLE.refresh })
   @HttpCode(HttpStatus.OK)
   async refresh(
     @Req() request: Request,

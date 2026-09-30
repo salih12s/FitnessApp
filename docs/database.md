@@ -16,6 +16,9 @@ User
 │   ├── TemplateExercise
 │   └── WorkoutSession (optional)
 ├── BodyMeasurement
+├── FoodEntry
+├── SavedFood
+├── NutritionGoal
 ├── CoachClient (as coach or as client)
 └── RefreshSession
 
@@ -48,6 +51,11 @@ The exercise library currently contains 125 practical commercial-gym exercises. 
 - **WorkoutTemplate:** A user's reusable program (`assignedByUserId` names the coach when the template is a copy a coach assigned): a name (1-80 characters) and `scheduledDays`, a weekday bitmask (Monday = 1, Tuesday = 2, ... Sunday = 64; 0 means unscheduled) used by the history calendar. Starting a session from a template stores its `templateId` on the session so the session bar can show the plan checklist.
 - **TemplateExercise:** One planned exercise inside a template, ordered by `position` (unique per template), with `targetSets` (1-20), `targetReps` (1-100), and an optional `targetWeightKg` (`DECIMAL(6,2)`). Templates may use global exercises or the owner's own custom exercises only.
 - **BodyMeasurement:** One dated body measurement owned by a user: `measuredAt` (`DATE`), and optional `weightKg` (`DECIMAL(5,2)`), `bodyFatPercent` (`DECIMAL(4,1)`, 0-100), `waistCm`, `chestCm`, `armCm` (`DECIMAL(5,1)`), and a note. At least one value is required. Several measurements may share a date.
+- **FoodEntry:** One food diary entry owned by a user: `eatenOn` (`DATE`, the user's local calendar day as sent by the client; the server never converts time zones), `meal` (`breakfast`, `lunch`, `dinner`, or `snack`), `name` (1-120 characters), an optional `servingLabel` (up to 60), `calories` (integer kcal, 0-10000), `proteinG`, `carbsG`, and `fatG` (`DECIMAL(5,1)`, default 0), and an optional note (up to 500). A day holds at most 200 entries; the service enforces this.
+- **SavedFood:** A user's favorite food for one-tap adding, with the same nutrition fields as `FoodEntry`. Unique per `(userId, name)`; adding an existing name updates it. At most 200 per user.
+- **NutritionGoal:** At most one row per user (`userId` is unique): the daily `calories` target (500-10000) and optional whole-gram `proteinG`, `carbsG`, and `fatG` targets.
+
+The food catalog behind "Besin ara" is not stored in the database. About 140 common foods with Turkish names live in `apps/api/src/nutrition/food-catalog.data.ts`, generated from USDA FoodData Central SR Legacy (public domain); packaged products are looked up on demand from Open Food Facts (ODbL) and never stored. Photos sent for analysis are never stored.
 
 `ExerciseLog` contains session-level context such as exercise, user, date, and notes. `ExerciseSet` is separate because each set can use a different weight and repetition count. Set order is determined by `setNumber`, which is unique within its log. Queries should order sets by `setNumber ASC`.
 
@@ -79,7 +87,7 @@ Deleting an `ExerciseLog` cascades only to its `ExerciseSet` children because se
 
 `CoachClient` rows cascade with either user: a link is permission, not history. `ExerciseLog.enteredByUserId` and `WorkoutTemplate.assignedByUserId` use `SET NULL`, so deleting a coach account or ending a link never removes a client's logs or programs. Turning coach mode off deletes the coach's links and invite code.
 
-Account deletion (`DELETE /api/users/me`) is the one workflow that removes a user's history, by explicit product decision: it requires the current password and the typed confirmation `hesabımı sil`, and the profile offers the CSV export first. `UsersService.deleteAccount` removes the data in one transaction in dependency order: logs (sets cascade), sessions, templates (plan rows cascade), measurements, exercise preferences, refresh sessions, custom exercises, then the user. No foreign key was relaxed for this; the service deletes each dependent explicitly.
+Account deletion (`DELETE /api/users/me`) is the one workflow that removes a user's history, by explicit product decision: it requires the current password and the typed confirmation `hesabımı sil`, and the profile offers the CSV export first. `UsersService.deleteAccount` removes the data in one transaction in dependency order: logs (sets cascade), sessions, templates (plan rows cascade), measurements, food entries, saved foods, nutrition goal, exercise preferences, refresh sessions, custom exercises, then the user. No foreign key was relaxed for this; the service deletes each dependent explicitly.
 
 Deleting a `User` cascades to its `RefreshSession` and `ExercisePreference` records because sessions and display preferences have no meaning without the account. Deleting an `Exercise` cascades to its `ExercisePreference` records for the same reason. Historical exercise relationships retain their restrictive deletion behavior.
 
@@ -102,6 +110,7 @@ Foreign keys cascade identifier updates so references remain consistent, althoug
 - `WorkoutTemplate(userId)` supports listing a user's templates.
 - `TemplateExercise(templateId, position)` is unique and supports ordered plan lookup; `TemplateExercise(exerciseId)` supports the exercise foreign key.
 - `BodyMeasurement(userId, measuredAt DESC)` supports a user's newest-first measurement list.
+- `FoodEntry(userId, eatenOn)` supports loading a day and summing a date range. `SavedFood(userId, name)` is unique. `NutritionGoal(userId)` is unique. Their `userId` foreign keys use `RESTRICT` like other user-owned data.
 - `User(coachInviteCode)` is unique and resolves invite codes.
 - `CoachClient(coachId, clientId)` is unique and supports the coach's client list and access checks; `CoachClient(clientId)` supports the client's coach list.
 - `ExerciseLog(enteredByUserId)` and `WorkoutTemplate(assignedByUserId)` support their foreign keys.

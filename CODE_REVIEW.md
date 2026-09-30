@@ -52,12 +52,12 @@ Amaç yalnızca "clean code" yapmak değil; gerçek kullanıcı verisi taşıyab
 
 ## 2. Öncelik seviyeleri
 
-| Seviye | Anlamı |
-|---|---|
-| **P0 — Critical** | Veri kaybı, auth bypass, ciddi güvenlik açığı veya production çökmesi. Hemen çözülmeli. |
-| **P1 — High** | Güvenlik, abuse, yetkilendirme veya kritik iş kuralı açısından önemli risk. Production öncesi çözülmeli. |
-| **P2 — Medium** | Ölçeklenme, bakım maliyeti, güvenilirlik veya operasyon tarafında önemli iyileştirme. |
-| **P3 — Low** | Kod kalitesi, geliştirici deneyimi veya uzun vadeli temizlik. |
+| Seviye            | Anlamı                                                                                                   |
+| ----------------- | -------------------------------------------------------------------------------------------------------- |
+| **P0 — Critical** | Veri kaybı, auth bypass, ciddi güvenlik açığı veya production çökmesi. Hemen çözülmeli.                  |
+| **P1 — High**     | Güvenlik, abuse, yetkilendirme veya kritik iş kuralı açısından önemli risk. Production öncesi çözülmeli. |
+| **P2 — Medium**   | Ölçeklenme, bakım maliyeti, güvenilirlik veya operasyon tarafında önemli iyileştirme.                    |
+| **P3 — Low**      | Kod kalitesi, geliştirici deneyimi veya uzun vadeli temizlik.                                            |
 
 ---
 
@@ -93,7 +93,10 @@ Ana riskler:
 
 # 4. P1 — Security / Abuse Protection
 
-## [ ] P1-01 — Rate limiting ekle
+## [x] P1-01 — Rate limiting ekle
+
+> Uygulandı (30 Eylül 2026). `@nestjs/throttler` global guard + auth endpointlerinde `@Throttle`; `TRUST_PROXY_HOPS`; demo için eşzamanlı istek sınırı. Limitler `apps/api/src/auth/auth.constants.ts` içinde.
+> **Canlıya almadan önce:** Hostinger'da `TRUST_PROXY_HOPS` gerçek hop sayısına ayarlanmalı (bkz. P1-04).
 
 ### Etkilenen alanlar
 
@@ -141,10 +144,10 @@ Demo kullanıcı sayısının sınırlanmış olması CPU/DB abuse riskini tamam
 
 ### Kabul kriterleri
 
-- [ ] Aynı IP kısa sürede yüzlerce login isteği atamıyor.
-- [ ] `/auth/demo` burst abuse ile DB/CPU tüketemiyor.
-- [ ] Normal frontend kullanımı rate-limit yüzünden bozulmuyor.
-- [ ] 429 response davranışı test ediliyor.
+- [x] Aynı IP kısa sürede yüzlerce login isteği atamıyor. (Yerelde doğrulandı: 10/dk sonrası 429, `Retry-After` başlığı var.)
+- [x] `/auth/demo` burst abuse ile DB/CPU tüketemiyor. (IP limiti 5/10 dk + en fazla 2 eşzamanlı demo. **Sadece kod incelemesi; eşzamanlı cap gerçek DB ile denenmedi.**)
+- [x] Normal frontend kullanımı rate-limit yüzünden bozulmuyor. (Genel limit 300/dk, refresh 30/dk; 429/503 için Türkçe mesaj eklendi. Tarayıcıda uçtan uca denenmedi.)
+- [ ] 429 response davranışı otomatik test ediliyor. (Şimdilik elle curl ile doğrulandı; API test runner'ı P1-02 ile gelince otomatikleşecek.)
 
 ---
 
@@ -194,12 +197,67 @@ Aynı refresh token paralel iki request ile gönderildiğinde yalnızca biri ba�
 
 ### Kabul kriterleri
 
-- [ ] API için test runner var.
+- [x] API için test runner var. (Node yerleşik `node --test` + `tsx`, yeni bağımlılık yok; şimdilik yalnızca saf fonksiyon testleri: `exercise-search.test.ts`. HTTP/DB entegrasyon testleri hâlâ eksik.)
 - [ ] Auth integration testleri var.
 - [ ] Ownership/IDOR testleri var.
 - [ ] Coach authorization testleri var.
 - [ ] Transaction/rollback testleri var.
-- [ ] `npm test` root seviyesinde backend testlerini de çalıştırıyor.
+- [x] `npm test` root seviyesinde backend testlerini de çalıştırıyor.
+
+## [ ] P1-04 — Rate limit için `trust proxy` değerini canlıda doğrula
+
+### Problem
+
+Uygulama Hostinger proxy/CDN arkasında çalışıyor. `TRUST_PROXY_HOPS` ayarlanmazsa `req.ip` herkes için proxy IP'si olur ve **bütün ziyaretçiler tek rate-limit kovasına** girer (biri demo spam yaparsa herkes 429 alır). Gereğinden fazla hop verilirse istemci `X-Forwarded-For` ile IP taklit edip limiti aşabilir.
+
+### Çözüm
+
+Canlıda gerçek hop sayısı ölçülüp `TRUST_PROXY_HOPS` env'ine yazılmalı (varsayılan 0 = proxy güvenilmez).
+
+### Kabul kriterleri
+
+- [ ] Canlıda iki farklı IP'den yapılan istekler ayrı kovalarda sayılıyor.
+- [ ] `X-Forwarded-For` başlığıyla sahte IP verilerek limit aşılamıyor.
+
+---
+
+## [ ] P2-05 — Login'de timing farkı (kullanıcı adı numaralandırma)
+
+### Etkilenen dosya
+
+- `apps/api/src/auth/auth.service.ts` (`login`)
+
+### Problem
+
+Kullanıcı yoksa `argon2.verify` hiç çalışmıyor; yanıt süresi kullanıcı varsa çok daha uzun. Süre farkından hangi kullanıcı adlarının kayıtlı olduğu anlaşılabilir.
+
+### Çözüm
+
+Kullanıcı bulunamadığında da sabit bir sahte hash'e karşı `argon2.verify` çalıştır.
+
+### Kabul kriterleri
+
+- [ ] Var olan/olmayan kullanıcı için yanıt süreleri istatistiksel olarak ayırt edilemiyor.
+
+---
+
+## [ ] P2-06 — Demo hesap tavanı meşru ziyaretçinin demo'sunu silebilir
+
+### Etkilenen dosya
+
+- `apps/api/src/demo/demo.service.ts` (`removeOldAccounts`)
+
+### Problem
+
+Demo hesap sayısı 300'ü aşınca en eskiler siliniyor. Saldırgan demo spam yaparak başkasının açık demo oturumunu 401'e düşürebilir. Ayrıca her demo çağrısı `removeOldAccounts()` (2 sorgu + silme) çalıştırıyor.
+
+### Çözüm
+
+Rate limit (P1-01) riski azalttı. Ek olarak temizliği her istekte değil periyodik/fırsat bazlı yapmak ve tavan doluyken yeni demo'yu reddetmek (eskiyi silmek yerine) değerlendirilmeli.
+
+### Kabul kriterleri
+
+- [ ] Demo spam'i mevcut demo oturumlarını düşürmüyor.
 
 ---
 
@@ -247,6 +305,8 @@ PWA/static frontend davranışı test edilerek CSP kontrollü şekilde sıkıla�
 ### Problem
 
 Auth tarafında environment validation iyi seviyede olmasına rağmen config doğrulaması merkezi değil.
+
+> Not: `AuthConfig` JWT, TTL ve cookie değişkenlerini zaten doğruluyor. Asıl iş sıfırdan eklemek değil, **merkezileştirmek** ve eksik olanları (`DATABASE_URL`, `FRONTEND_URL`, `PORT`, `TRUST_PROXY_HOPS`) eklemek. `FRONTEND_URL` yoksa CORS sessizce `http://localhost:3005` varsayılanına düşüyor.
 
 Örneğin `DATABASE_URL` yoksa Prisma client `null` bırakılabiliyor ve uygulama yine process olarak ayağa kalkabiliyor.
 
@@ -297,10 +357,13 @@ Uzun vadede hiç tekrar kullanılmayan expired session kayıtları birikebilir.
 
 Periyodik veya fırsat bazlı cleanup:
 
-```sql
-DELETE FROM refresh_sessions
-WHERE expires_at < NOW();
+```ts
+prisma.refreshSession.deleteMany({
+  where: { expiresAt: { lt: new Date() } },
+});
 ```
+
+> Ham SQL'de `NOW()` kullanma: MariaDB'de `NOW()` sunucu yerel saatidir, Prisma UTC yazar. Prisma ile `new Date()` (veya SQL'de `UTC_TIMESTAMP()`) kullan.
 
 Shared hosting koşullarına göre:
 
@@ -389,7 +452,7 @@ Az kullanıcıda önemsiz; client/log sayısı arttığında gereksiz tekrar tar
 Önce logları tek seferde:
 
 ```ts
-Map<userId, Log[]>
+Map<userId, Log[]>;
 ```
 
 şeklinde grupla.
@@ -406,6 +469,8 @@ Sonra client başına O(1) lookup yap.
 # 7. P1/P2 — CI/CD Quality Gate
 
 ## [ ] P1-03 — GitHub Actions CI ekle
+
+> Workflow yazıldı (`.github/workflows/ci.yml`) ve komutlar yerelde geçti; **GitHub'da ilk çalışması henüz görülmedi**, bu yüzden kutular açık. Merge engelleme için repo ayarlarında branch protection gerekir.
 
 ### Problem
 
@@ -578,7 +643,8 @@ Aynı anda birden fazla 401 durumunda birden fazla refresh request yarışması 
 
 ## Sprint 1 — Security hardening
 
-- [ ] P1-01 Rate limiting
+- [x] P1-01 Rate limiting
+- [ ] P1-04 `TRUST_PROXY_HOPS` canlıda doğrula
 - [ ] P2-01 Helmet/security headers
 - [ ] P2-02 Environment validation
 

@@ -1,5 +1,9 @@
 import { randomBytes, randomInt, randomUUID } from 'node:crypto';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 
 import { generateInviteCode } from '../coach/coach.service.js';
@@ -10,10 +14,13 @@ import { publicUserSelect, UsersService } from '../users/users.service.js';
 import {
   buildHistory,
   buildMeasurements,
+  buildNutritionDiary,
   createRandom,
   DEMO_CLIENT_PROGRAM,
   DEMO_CUSTOM_EXERCISE,
+  DEMO_NUTRITION_GOAL,
   DEMO_OWNER_PROGRAMS,
+  DEMO_SAVED_FOODS,
   DEMO_SECOND_CLIENT_PROGRAMS,
   localWeekdayBit,
   weightForWeek,
@@ -25,6 +32,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DEMO_LIFETIME_MS = DAY_MS;
 /** Each demo creates three users; the cap keeps repeated clicks bounded. */
 const MAX_DEMO_USERS = 300;
+/**
+ * Building a demo holds a database connection for seconds, and the pool is
+ * small on shared hosting, so a few simultaneous demos could starve the whole
+ * site. Extra requests are turned away instead of queued.
+ */
+const MAX_CONCURRENT_DEMOS = 2;
 const SUFFIX_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
 const MONDAY = 1;
 
@@ -50,6 +63,7 @@ function daysAgo(now: Date, days: number): Date {
 @Injectable()
 export class DemoService {
   private readonly logger = new Logger(DemoService.name);
+  private activeCreations = 0;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -57,6 +71,19 @@ export class DemoService {
   ) {}
 
   async createAccount(): Promise<PublicUser> {
+    if (this.activeCreations >= MAX_CONCURRENT_DEMOS) {
+      throw new ServiceUnavailableException('The demo is busy right now.');
+    }
+
+    this.activeCreations += 1;
+    try {
+      return await this.buildAccount();
+    } finally {
+      this.activeCreations -= 1;
+    }
+  }
+
+  private async buildAccount(): Promise<PublicUser> {
     await this.removeOldAccounts();
 
     const suffix = randomSuffix();
@@ -126,6 +153,12 @@ export class DemoService {
             now,
             random,
           ),
+        );
+
+        await this.createNutrition(
+          db,
+          owner.id,
+          buildNutritionDiary(now, random),
         );
 
         await db.coachClient.createMany({
@@ -353,6 +386,22 @@ export class DemoService {
   ): Promise<void> {
     await db.bodyMeasurement.createMany({
       data: measurements.map((measurement) => ({ userId, ...measurement })),
+    });
+  }
+
+  private async createNutrition(
+    db: Db,
+    userId: string,
+    entries: ReturnType<typeof buildNutritionDiary>,
+  ): Promise<void> {
+    await db.foodEntry.createMany({
+      data: entries.map((entry) => ({ userId, ...entry })),
+    });
+    await db.savedFood.createMany({
+      data: DEMO_SAVED_FOODS.map((item) => ({ userId, ...item })),
+    });
+    await db.nutritionGoal.create({
+      data: { userId, ...DEMO_NUTRITION_GOAL },
     });
   }
 

@@ -387,3 +387,119 @@ export const DEMO_SECOND_CLIENT_PROGRAMS: readonly DemoProgramPlan[] = [
     ],
   },
 ];
+
+export type DemoMeal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+interface DemoFood {
+  name: string;
+  servingLabel: string;
+  calories: number;
+  proteinG: number;
+  carbsG: number;
+  fatG: number;
+}
+
+export interface DemoFoodEntry extends DemoFood {
+  eatenOn: Date;
+  meal: DemoMeal;
+}
+
+/** Daily targets for the sample account. */
+export const DEMO_NUTRITION_GOAL = {
+  calories: 1900,
+  proteinG: 130,
+  carbsG: 200,
+  fatG: 60,
+};
+
+const food = (
+  name: string,
+  servingLabel: string,
+  calories: number,
+  proteinG: number,
+  carbsG: number,
+  fatG: number,
+): DemoFood => ({ name, servingLabel, calories, proteinG, carbsG, fatG });
+
+// Typical values for common foods; sample data, not nutrition advice.
+const yulaf = food('Yulaf ezmesi', '60 g', 228, 8, 40, 4.2);
+const sut = food('Süt', '200 ml', 122, 6.4, 9.6, 6.6);
+const muz = food('Muz', '1 orta', 105, 1.3, 27, 0.4);
+const yumurta = food('Haşlanmış yumurta', '3 adet', 234, 18.9, 1.7, 15.9);
+const ekmek = food('Tam buğday ekmeği', '2 dilim', 160, 8, 28, 2);
+const peynir = food('Beyaz peynir', '40 g', 106, 6, 1, 8.8);
+const yogurt = food('Yoğurt', '200 g', 122, 7, 9, 7);
+const granola = food('Granola', '40 g', 180, 4, 27, 6);
+const tavuk = food('Izgara tavuk göğsü', '180 g', 297, 55.8, 0, 6.5);
+const pilav = food('Pirinç pilavı', '150 g', 195, 4, 42, 0.5);
+const salata = food('Mevsim salata', '1 porsiyon', 60, 2, 8, 2.5);
+const mercimek = food('Mercimek çorbası', '1 kase', 180, 10, 28, 3);
+const tonbaligi = food('Ton balıklı salata', '1 porsiyon', 220, 24, 6, 11);
+const kofte = food('Izgara köfte', '150 g', 330, 28, 6, 21);
+const bulgur = food('Bulgur pilavı', '150 g', 170, 5.5, 35, 1);
+const cacik = food('Cacık', '1 kase', 80, 4, 6, 4);
+const somon = food('Fırında somon', '170 g', 354, 34, 0, 23);
+const patates = food('Haşlanmış patates', '200 g', 154, 4, 34, 0.2);
+const brokoli = food('Buharda brokoli', '150 g', 51, 4.2, 10, 0.6);
+const makarna = food('Makarna', '100 g kuru', 350, 12, 71, 1.5);
+const kiymaSos = food('Kıymalı sos', '100 g', 170, 14, 6, 10);
+const tavukSote = food('Tavuk sote', '200 g', 280, 36, 8, 11);
+const proteinShake = food('Protein shake', '1 ölçek', 120, 24, 3, 1.5);
+const badem = food('Badem', '30 g', 174, 6.4, 6.5, 15);
+const elma = food('Elma', '1 orta', 95, 0.5, 25, 0.3);
+const lor = food('Lor peyniri', '100 g', 98, 11, 3.4, 4.3);
+const fistikEzmesi = food('Yer fıstığı ezmesi', '20 g', 120, 5, 4, 10);
+
+const BREAKFASTS: DemoFood[][] = [
+  [yulaf, sut, muz],
+  [yumurta, ekmek, peynir],
+  [yogurt, granola, muz],
+];
+const LUNCHES: DemoFood[][] = [
+  [tavuk, pilav, salata],
+  [mercimek, ekmek, tonbaligi],
+  [kofte, bulgur, cacik],
+];
+const DINNERS: DemoFood[][] = [
+  [somon, patates, brokoli],
+  [makarna, kiymaSos, salata],
+  [tavukSote, bulgur, cacik],
+];
+const SNACKS: DemoFood[] = [proteinShake, badem, elma, lor, fistikEzmesi];
+
+/** Favorites the sample account starts with. */
+export const DEMO_SAVED_FOODS: readonly DemoFood[] = [
+  proteinShake,
+  yulaf,
+  tavuk,
+  badem,
+];
+
+/**
+ * A food diary for the last `days` days ending today: three meals and one or
+ * two snacks a day. Today is still in progress, so it holds only breakfast and
+ * lunch, like a real day.
+ */
+export function buildNutritionDiary(
+  now: Date,
+  random: Random,
+  days = 14,
+): DemoFoodEntry[] {
+  const entries: DemoFoodEntry[] = [];
+  const add = (eatenOn: Date, meal: DemoMeal, foods: readonly DemoFood[]) => {
+    for (const item of foods) entries.push({ ...item, eatenOn, meal });
+  };
+
+  for (let back = days - 1; back >= 0; back -= 1) {
+    const eatenOn = localDate(new Date(now.getTime() - back * DAY_MS));
+    add(eatenOn, 'breakfast', pick(random, BREAKFASTS));
+    add(eatenOn, 'lunch', pick(random, LUNCHES));
+    if (back === 0) continue;
+
+    add(eatenOn, 'dinner', pick(random, DINNERS));
+    add(eatenOn, 'snack', [pick(random, SNACKS)]);
+    if (random() < 0.45) add(eatenOn, 'snack', [pick(random, SNACKS)]);
+  }
+
+  return entries;
+}

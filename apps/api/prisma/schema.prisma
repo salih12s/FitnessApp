@@ -16,6 +16,13 @@ enum WeightUnit {
   lb
 }
 
+enum MealType {
+  breakfast
+  lunch
+  dinner
+  snack
+}
+
 model User {
   id                String               @id @default(uuid()) @db.Char(36)
   username          String               @unique
@@ -34,6 +41,9 @@ model User {
   workoutSessions   WorkoutSession[]
   workoutTemplates  WorkoutTemplate[]
   bodyMeasurements  BodyMeasurement[]
+  foodEntries       FoodEntry[]
+  savedFoods        SavedFood[]
+  nutritionGoal     NutritionGoal?
   coachLinks        CoachClient[]        @relation("CoachLinks")
   clientLinks       CoachClient[]        @relation("ClientLinks")
   enteredLogs       ExerciseLog[]        @relation("LogEnteredBy")
@@ -226,6 +236,61 @@ model BodyMeasurement {
 
   @@index([userId, measuredAt(sort: Desc)])
   @@map("body_measurements")
+}
+
+/// One dated food diary entry: what a user ate, with its calories and macros.
+/// `eatenOn` is the user's local calendar day, sent by the client as a date.
+model FoodEntry {
+  id           String   @id @default(uuid()) @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  eatenOn      DateTime @map("eaten_on") @db.Date
+  meal         MealType
+  name         String   @db.VarChar(120)
+  servingLabel String?  @map("serving_label") @db.VarChar(60)
+  calories     Int
+  proteinG     Decimal  @default(0) @map("protein_g") @db.Decimal(5, 1)
+  carbsG       Decimal  @default(0) @map("carbs_g") @db.Decimal(5, 1)
+  fatG         Decimal  @default(0) @map("fat_g") @db.Decimal(5, 1)
+  note         String?  @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@index([userId, eatenOn])
+  @@map("food_entries")
+}
+
+/// A favorite food the user can add to a meal in one tap.
+model SavedFood {
+  id           String   @id @default(uuid()) @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  name         String   @db.VarChar(120)
+  servingLabel String?  @map("serving_label") @db.VarChar(60)
+  calories     Int
+  proteinG     Decimal  @default(0) @map("protein_g") @db.Decimal(5, 1)
+  carbsG       Decimal  @default(0) @map("carbs_g") @db.Decimal(5, 1)
+  fatG         Decimal  @default(0) @map("fat_g") @db.Decimal(5, 1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@unique([userId, name])
+  @@map("saved_foods")
+}
+
+/// A user's daily calorie target and optional macro targets (grams).
+model NutritionGoal {
+  id        String   @id @default(uuid()) @db.Char(36)
+  userId    String   @unique @map("user_id") @db.Char(36)
+  calories  Int
+  proteinG  Int?     @map("protein_g")
+  carbsG    Int?     @map("carbs_g")
+  fatG      Int?     @map("fat_g")
+  createdAt DateTime @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.DateTime(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("nutrition_goals")
 }
 
 /// Permission for a coach to view a client's data and enter logs for them.

@@ -108,6 +108,9 @@ export class UsersService {
     await transaction.workoutSession.deleteMany({ where: { userId } });
     await transaction.workoutTemplate.deleteMany({ where: { userId } });
     await transaction.bodyMeasurement.deleteMany({ where: { userId } });
+    await transaction.foodEntry.deleteMany({ where: { userId } });
+    await transaction.savedFood.deleteMany({ where: { userId } });
+    await transaction.nutritionGoal.deleteMany({ where: { userId } });
     await transaction.exercisePreference.deleteMany({ where: { userId } });
     await transaction.refreshSession.deleteMany({ where: { userId } });
     await transaction.exercise.deleteMany({

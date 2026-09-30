@@ -6,6 +6,7 @@ import {
 
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { CreateCustomExerciseDto } from './dto/create-custom-exercise.dto.js';
+import { rankExercises } from './exercise-search.js';
 import {
   displayExerciseName,
   exerciseNameOverrideSelect,
@@ -117,45 +118,50 @@ export class ExercisesService {
     userId: string,
     query: string,
   ): Promise<ExerciseSummaryResponse[]> {
+    // The whole visible library is small, so ranking happens in memory (see
+    // exercise-search.ts) rather than with SQL LIKE.
     const exercises = await this.prisma.client.exercise.findMany({
       where: {
         OR: [
           { isCustom: false, slugNamespace: 'global' },
           { isCustom: true, createdByUserId: userId },
         ],
-        // MySQL's default utf8mb4 collations compare case-insensitively.
-        AND: [
-          notHiddenWhere(userId),
-          {
-            OR: [
-              { name: { contains: query } },
-              {
-                preferences: {
-                  some: {
-                    userId,
-                    customName: { contains: query },
-                  },
-                },
-              },
-              { equipment: { contains: query } },
-              {
-                muscleGroup: {
-                  name: { contains: query },
-                },
-              },
-            ],
-          },
-        ],
+        ...notHiddenWhere(userId),
       },
+      // Equal scores keep this order, so results are stable.
       orderBy: [{ isCustom: 'asc' }, { name: 'asc' }],
-      take: 30,
       select: {
         ...exerciseSummarySelect,
+        description: true,
         preferences: exerciseNameOverrideSelect(userId),
       },
     });
 
-    return exercises.map(withDisplayName).sort(byLibraryOrder);
+    const searchable = exercises.map((exercise) => {
+      const { id, slug, equipment, isCustom, muscleGroup, description } =
+        exercise;
+      return {
+        id,
+        slug,
+        equipment,
+        isCustom,
+        muscleGroup,
+        description,
+        name: displayExerciseName(exercise),
+        originalName: exercise.name,
+      };
+    });
+
+    return rankExercises(searchable, query).map(
+      ({ id, name, slug, equipment, isCustom, muscleGroup }) => ({
+        id,
+        name,
+        slug,
+        equipment,
+        muscleGroup,
+        isCustom,
+      }),
+    );
   }
 
   async findBySlug(

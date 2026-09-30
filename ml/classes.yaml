@@ -1,0 +1,905 @@
+# Turkish food classes for the on-device recognition model (see docs/food-model.md).
+#
+# Classes follow how a dish LOOKS in a photo, not its recipe, because that is
+# what a vision model can tell apart. Dishes that are nearly identical on a
+# plate share a `look_alike` group; the app shows the top guesses and the user
+# picks the right variant, so a mix-up between two variants costs little.
+#
+#   tier: pilot     the first ~40 classes, used to prove the whole pipeline
+#         core      the rest of the built-in set (pilot + core is about 150)
+#         extended  the long tail; candidates for the paid "custom catalog" tier
+#   meals: breakfast | lunch | dinner | snack | dessert | drink
+#   commons: Wikimedia Commons categories with freely licensed photos (a seed
+#            only: most dishes have fewer than 50 files there). A category can be
+#            about something else with the same name, so every photo is reviewed
+#            by a person before training (scripts/contact_sheet.py, review.py).
+version: 1
+classes:
+  # --- Kahvaltı -----------------------------------------------------------
+  # Category:Menemen on Commons is the town near Izmir, not the dish: all of its photos were rejected.
+  - { id: menemen, name: Menemen, meals: [breakfast], tier: pilot }
+  - {
+      id: sucuklu-yumurta,
+      name: Sucuklu yumurta,
+      meals: [breakfast],
+      tier: pilot,
+      look_alike: yumurta-tavada,
+    }
+  - {
+      id: sahanda-yumurta,
+      name: Sahanda yumurta,
+      meals: [breakfast],
+      tier: pilot,
+      look_alike: yumurta-tavada,
+    }
+  - {
+      id: haslanmis-yumurta,
+      name: Haşlanmış yumurta,
+      meals: [breakfast],
+      tier: pilot,
+    }
+  - { id: omlet, name: Omlet, meals: [breakfast], tier: pilot }
+  - {
+      id: pastirmali-yumurta,
+      name: Pastırmalı yumurta,
+      meals: [breakfast],
+      tier: core,
+      look_alike: yumurta-tavada,
+    }
+  - {
+      id: kuymak-mihlama,
+      name: Kuymak (mıhlama),
+      meals: [breakfast],
+      tier: extended,
+    }
+  - { id: mucver, name: Mücver, meals: [breakfast, lunch], tier: core }
+  - {
+      id: simit,
+      name: Simit,
+      meals: [breakfast, snack],
+      tier: pilot,
+      commons: [Simit],
+    }
+  - {
+      id: acma,
+      name: Açma,
+      meals: [breakfast, snack],
+      tier: core,
+      look_alike: poğaça-acma,
+      commons: [Açma],
+    }
+  - {
+      id: pogaca,
+      name: Poğaça,
+      meals: [breakfast, snack],
+      tier: pilot,
+      look_alike: poğaça-acma,
+      commons: [Poğaça],
+    }
+  - {
+      id: gozleme,
+      name: Gözleme,
+      meals: [breakfast, lunch],
+      tier: core,
+      commons: [Gözleme],
+    }
+  - {
+      id: sigara-boregi,
+      name: Sigara böreği,
+      meals: [breakfast, snack],
+      tier: core,
+    }
+  - { id: krep, name: Krep, meals: [breakfast, dessert], tier: core }
+  - { id: pankek, name: Pankek, meals: [breakfast], tier: core }
+  - { id: tost, name: Tost, meals: [breakfast, snack], tier: pilot }
+  - { id: sandvic, name: Sandviç, meals: [breakfast, lunch], tier: core }
+  - { id: kruvasan, name: Kruvasan, meals: [breakfast, snack], tier: core }
+  - { id: yulaf-lapasi, name: Yulaf lapası, meals: [breakfast], tier: core }
+  - {
+      id: granola-yogurt,
+      name: Granola ve yoğurt,
+      meals: [breakfast],
+      tier: core,
+    }
+  - {
+      id: beyaz-peynir-tabagi,
+      name: Beyaz peynir tabağı,
+      meals: [breakfast],
+      tier: core,
+    }
+  - {
+      id: kasar-peyniri-tabagi,
+      name: Kaşar peyniri tabağı,
+      meals: [breakfast],
+      tier: core,
+    }
+  - { id: zeytin-tabagi, name: Zeytin tabağı, meals: [breakfast], tier: core }
+  - {
+      id: domates-salatalik-tabagi,
+      name: Domates salatalık tabağı,
+      meals: [breakfast],
+      tier: core,
+    }
+  - { id: bal-kaymak, name: Bal ve kaymak, meals: [breakfast], tier: core }
+  - {
+      id: recel-tereyagi,
+      name: Reçel ve tereyağı,
+      meals: [breakfast],
+      tier: extended,
+    }
+  - { id: sucuk-tabagi, name: Sucuk tabağı, meals: [breakfast], tier: core }
+  - {
+      id: salam-jambon-tabagi,
+      name: Salam jambon tabağı,
+      meals: [breakfast],
+      tier: extended,
+    }
+  - {
+      id: serpme-kahvalti,
+      name: Serpme kahvaltı (sofra),
+      meals: [breakfast],
+      tier: extended,
+    }
+
+  # --- Çorbalar -----------------------------------------------------------
+  - {
+      id: mercimek-corbasi,
+      name: Mercimek çorbası,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: kirmizi-corba,
+    }
+  - {
+      id: ezogelin-corbasi,
+      name: Ezogelin çorbası,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: kirmizi-corba,
+    }
+  - {
+      id: domates-corbasi,
+      name: Domates çorbası,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: kirmizi-corba,
+    }
+  - {
+      id: yayla-corbasi,
+      name: Yayla çorbası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: beyaz-corba,
+    }
+  - {
+      id: tarhana-corbasi,
+      name: Tarhana çorbası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: kirmizi-corba,
+    }
+  - {
+      id: iskembe-corbasi,
+      name: İşkembe çorbası,
+      meals: [lunch, dinner],
+      tier: extended,
+      look_alike: beyaz-corba,
+    }
+  - {
+      id: tavuk-suyu-sehriye-corbasi,
+      name: Tavuk suyu (şehriye) çorbası,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: sebze-corbasi,
+      name: Sebze çorbası,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: mantar-corbasi,
+      name: Mantar çorbası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: beyaz-corba,
+    }
+  - {
+      id: dugun-corbasi,
+      name: Düğün çorbası,
+      meals: [lunch, dinner],
+      tier: extended,
+      look_alike: beyaz-corba,
+    }
+  - {
+      id: balik-corbasi,
+      name: Balık çorbası,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+
+  # --- Etli yemekler, kebaplar, hamur işleri -----------------------------------
+  - {
+      id: kuru-fasulye,
+      name: Kuru fasulye,
+      meals: [lunch, dinner],
+      tier: pilot,
+      commons: [Kuru fasulye],
+    }
+  - {
+      id: nohut-yemegi,
+      name: Nohut yemeği,
+      meals: [lunch, dinner],
+      tier: pilot,
+    }
+  - {
+      id: karniyarik,
+      name: Karnıyarık,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: dolgulu-patlican,
+      commons: [Karnıyarık],
+    }
+  - {
+      id: imam-bayildi,
+      name: İmam bayıldı,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: dolgulu-patlican,
+    }
+  - { id: musakka, name: Musakka, meals: [lunch, dinner], tier: core }
+  - { id: saksuka, name: Şakşuka, meals: [lunch, dinner], tier: core }
+  - {
+      id: hunkar-begendi,
+      name: Hünkâr beğendi,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - { id: ali-nazik, name: Ali Nazik, meals: [lunch, dinner], tier: extended }
+  - { id: tas-kebabi, name: Tas kebabı, meals: [lunch, dinner], tier: core }
+  - { id: etli-guvec, name: Etli güveç, meals: [lunch, dinner], tier: core }
+  - {
+      id: orman-kebabi,
+      name: Orman kebabı,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - { id: kavurma, name: Kavurma, meals: [lunch, dinner], tier: extended }
+  - { id: et-sote, name: Et sote, meals: [lunch, dinner], tier: core }
+  - { id: kuzu-tandir, name: Kuzu tandır, meals: [lunch, dinner], tier: core }
+  - { id: kuzu-pirzola, name: Kuzu pirzola, meals: [lunch, dinner], tier: core }
+  - {
+      id: izgara-kofte,
+      name: Izgara köfte,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: kofte,
+    }
+  - {
+      id: inegol-kofte,
+      name: İnegöl köfte,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: kofte,
+    }
+  - { id: izmir-kofte, name: İzmir köfte, meals: [lunch, dinner], tier: core }
+  - {
+      id: kadinbudu-kofte,
+      name: Kadınbudu köfte,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: akcaabat-kofte,
+      name: Akçaabat köfte,
+      meals: [lunch, dinner],
+      tier: extended,
+      look_alike: kofte,
+    }
+  - {
+      id: ciger-tava,
+      name: Ciğer (tava/ızgara),
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: adana-kebap,
+      name: Adana kebap,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: kiyma-kebap,
+    }
+  - {
+      id: urfa-kebap,
+      name: Urfa kebap,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: kiyma-kebap,
+    }
+  - { id: sis-kebap, name: Şiş kebap, meals: [lunch, dinner], tier: core }
+  - { id: beyti, name: Beyti, meals: [lunch, dinner], tier: extended }
+  - { id: iskender, name: İskender, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: patlican-kebabi,
+      name: Patlıcan kebabı,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - {
+      id: tantuni,
+      name: Tantuni,
+      meals: [lunch, dinner, snack],
+      tier: core,
+      commons: [Tantuni],
+    }
+  - {
+      id: et-doner-porsiyon,
+      name: Et döner (porsiyon),
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: doner,
+    }
+  - {
+      id: tavuk-doner-porsiyon,
+      name: Tavuk döner (porsiyon),
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: doner,
+    }
+  - {
+      id: doner-durum,
+      name: Döner dürüm,
+      meals: [lunch, dinner, snack],
+      tier: pilot,
+      look_alike: durum,
+      commons: [Döner kebab],
+    }
+  - { id: kokorec, name: Kokoreç, meals: [snack, dinner], tier: extended }
+  - {
+      id: kiymali-pide,
+      name: Kıymalı pide,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: pide,
+    }
+  - {
+      id: kasarli-pide,
+      name: Kaşarlı pide,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: pide,
+    }
+  - {
+      id: kusbasili-pide,
+      name: Kuşbaşılı pide,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: pide,
+    }
+  - {
+      id: lahmacun,
+      name: Lahmacun,
+      meals: [lunch, dinner],
+      tier: pilot,
+      commons: [Lahmacun],
+    }
+  - { id: manti, name: Mantı, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: su-boregi,
+      name: Su böreği,
+      meals: [breakfast, lunch],
+      tier: pilot,
+      look_alike: borek,
+      commons: [Börek],
+    }
+  - {
+      id: tepsi-boregi,
+      name: Tepsi böreği,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: borek,
+    }
+  - {
+      id: kol-boregi,
+      name: Kol böreği,
+      meals: [breakfast, lunch],
+      tier: core,
+      look_alike: borek,
+    }
+  - {
+      id: ispanakli-borek,
+      name: Ispanaklı börek,
+      meals: [breakfast, lunch],
+      tier: core,
+      look_alike: borek,
+    }
+  - {
+      id: etli-ekmek,
+      name: Etli ekmek,
+      meals: [lunch, dinner],
+      tier: extended,
+      look_alike: pide,
+    }
+
+  # --- Tavuk --------------------------------------------------------------
+  - { id: tavuk-sote, name: Tavuk sote, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: tavuk-izgara,
+      name: Izgara tavuk,
+      meals: [lunch, dinner],
+      tier: pilot,
+    }
+  - { id: tavuk-sis, name: Tavuk şiş, meals: [lunch, dinner], tier: core }
+  - { id: tavuk-guvec, name: Tavuk güveç, meals: [lunch, dinner], tier: core }
+  - {
+      id: firin-tavuk,
+      name: Fırın tavuk (but/bütün),
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: tavuk-kanat,
+      name: Tavuk kanat,
+      meals: [lunch, dinner, snack],
+      tier: core,
+    }
+  - { id: pilic-pilav, name: Tavuklu pilav, meals: [lunch, dinner], tier: core }
+
+  # --- Balık ve deniz ürünleri -------------------------------------------
+  - { id: hamsi-tava, name: Hamsi tava, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: levrek-izgara,
+      name: Levrek (ızgara),
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: izgara-balik,
+    }
+  - {
+      id: cipura-izgara,
+      name: Çipura (ızgara),
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: izgara-balik,
+    }
+  - {
+      id: somon-izgara,
+      name: Somon (ızgara/fırın),
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: uskumru-izgara,
+      name: Uskumru (ızgara),
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: izgara-balik,
+    }
+  - { id: balik-ekmek, name: Balık ekmek, meals: [lunch, snack], tier: core }
+  - { id: kalamar-tava, name: Kalamar tava, meals: [lunch, dinner], tier: core }
+  - {
+      id: karides-guvec,
+      name: Karides güveç,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - { id: midye-tava, name: Midye tava, meals: [snack, dinner], tier: extended }
+  - { id: midye-dolma, name: Midye dolma, meals: [snack], tier: core }
+
+  # --- Pilav ve makarna ---------------------------------------------------
+  - {
+      id: pirinc-pilavi,
+      name: Pirinç pilavı,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: pilav,
+    }
+  - {
+      id: bulgur-pilavi,
+      name: Bulgur pilavı,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: pilav,
+    }
+  - {
+      id: sehriyeli-pilav,
+      name: Şehriyeli pilav,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: pilav,
+    }
+  - {
+      id: nohutlu-pilav,
+      name: Nohutlu pilav,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - { id: ic-pilav, name: İç pilav, meals: [lunch, dinner], tier: core }
+  - {
+      id: sebzeli-pilav,
+      name: Sebzeli pilav,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: makarna-domates,
+      name: Domates soslu makarna,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: makarna,
+    }
+  - {
+      id: makarna-bolonez,
+      name: Bolonez makarna,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: makarna,
+    }
+  - {
+      id: makarna-beyaz-sos,
+      name: Beyaz soslu makarna,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: makarna,
+    }
+  - {
+      id: firin-makarna,
+      name: Fırın makarna,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - { id: eriste, name: Erişte, meals: [lunch, dinner], tier: extended }
+
+  # --- Zeytinyağlılar ve sebze yemekleri ---------------------------------
+  - {
+      id: yaprak-sarma,
+      name: Yaprak sarma,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: sarma,
+      commons: [Yaprak sarma, Sarma],
+    }
+  - {
+      id: lahana-sarmasi,
+      name: Lahana sarma,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: sarma,
+    }
+  - {
+      id: biber-dolma,
+      name: Biber dolma,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: dolma,
+      commons: [Dolma],
+    }
+  - {
+      id: kabak-dolma,
+      name: Kabak dolma,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: dolma,
+    }
+  - {
+      id: domates-dolma,
+      name: Domates dolma,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: dolma,
+    }
+  - {
+      id: patlican-dolma,
+      name: Patlıcan dolma,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: dolma,
+    }
+  - { id: taze-fasulye, name: Taze fasulye, meals: [lunch, dinner], tier: core }
+  - {
+      id: barbunya-pilaki,
+      name: Barbunya pilaki,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: enginar,
+      name: Zeytinyağlı enginar,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - { id: pirasa, name: Zeytinyağlı pırasa, meals: [lunch, dinner], tier: core }
+  - {
+      id: kereviz,
+      name: Zeytinyağlı kereviz,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - { id: bamya, name: Bamya, meals: [lunch, dinner], tier: core }
+  - {
+      id: ispanak-yemegi,
+      name: Ispanak yemeği,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: karnabahar-yemegi,
+      name: Karnabahar yemeği,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - {
+      id: bezelye-yemegi,
+      name: Bezelye yemeği,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - { id: turlu, name: Türlü, meals: [lunch, dinner], tier: core }
+  - {
+      id: patates-yemegi,
+      name: Patates yemeği,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: patlican-kizartmasi,
+      name: Patlıcan kızartması,
+      meals: [lunch, dinner],
+      tier: core,
+    }
+  - {
+      id: kabak-kizartmasi,
+      name: Kabak kızartması,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - {
+      id: patates-kizartmasi,
+      name: Patates kızartması,
+      meals: [lunch, dinner, snack],
+      tier: pilot,
+    }
+
+  # --- Salata ve meze -----------------------------------------------------
+  - {
+      id: coban-salata,
+      name: Çoban salata,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: salata,
+    }
+  - {
+      id: mevsim-salata,
+      name: Mevsim salata,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: salata,
+    }
+  - {
+      id: gavurdagi-salata,
+      name: Gavurdağı salatası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: salata,
+    }
+  - { id: piyaz, name: Piyaz, meals: [lunch, dinner], tier: core }
+  - {
+      id: cacik,
+      name: Cacık,
+      meals: [lunch, dinner],
+      tier: pilot,
+      look_alike: yogurtlu-meze,
+      commons: [Cacık],
+    }
+  - {
+      id: haydari,
+      name: Haydari,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: yogurtlu-meze,
+    }
+  - {
+      id: humus,
+      name: Humus,
+      meals: [lunch, dinner, snack],
+      tier: core,
+      commons: [Humus],
+    }
+  - { id: babagannus, name: Babagannuş, meals: [lunch, dinner], tier: core }
+  - { id: acili-ezme, name: Acılı ezme, meals: [lunch, dinner], tier: core }
+  - { id: muhammara, name: Muhammara, meals: [lunch, dinner], tier: extended }
+  - {
+      id: rus-salatasi,
+      name: Rus salatası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: patates-salatasi,
+    }
+  - {
+      id: patates-salatasi,
+      name: Patates salatası,
+      meals: [lunch, dinner],
+      tier: core,
+      look_alike: patates-salatasi,
+    }
+  - { id: kisir, name: Kısır, meals: [lunch, dinner, snack], tier: core }
+  - {
+      id: semizotu-salatasi,
+      name: Semizotu salatası,
+      meals: [lunch, dinner],
+      tier: extended,
+    }
+  - {
+      id: yogurtlu-havuc,
+      name: Yoğurtlu havuç,
+      meals: [lunch, dinner],
+      tier: extended,
+      look_alike: yogurtlu-meze,
+    }
+
+  # --- Fast food ve sokak lezzetleri -------------------------------------
+  - { id: hamburger, name: Hamburger, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: islak-hamburger,
+      name: Islak hamburger,
+      meals: [snack, dinner],
+      tier: extended,
+    }
+  - { id: pizza, name: Pizza, meals: [lunch, dinner], tier: pilot }
+  - {
+      id: kumpir,
+      name: Kumpir,
+      meals: [lunch, dinner, snack],
+      tier: core,
+      commons: [Kumpir],
+    }
+  - {
+      id: cig-kofte-durum,
+      name: Çiğ köfte dürüm,
+      meals: [lunch, snack],
+      tier: core,
+      look_alike: durum,
+      commons: [Çiğ köfte],
+    }
+  - { id: hot-dog, name: Sosisli sandviç, meals: [snack], tier: core }
+  - { id: tavuk-nugget, name: Tavuk nugget, meals: [snack, lunch], tier: core }
+  - { id: patates-cipsi, name: Patates cipsi, meals: [snack], tier: core }
+  - { id: misir, name: Haşlama/közlenmiş mısır, meals: [snack], tier: core }
+  - { id: kestane, name: Kestane, meals: [snack], tier: extended }
+
+  # --- Tatlılar -----------------------------------------------------------
+  - {
+      id: baklava,
+      name: Baklava,
+      meals: [dessert],
+      tier: pilot,
+      commons: [Baklava],
+    }
+  - { id: kunefe, name: Künefe, meals: [dessert], tier: pilot }
+  - {
+      id: sutlac,
+      name: Sütlaç,
+      meals: [dessert],
+      tier: pilot,
+      look_alike: sutlu-tatli,
+      commons: [Sütlaç],
+    }
+  - {
+      id: kazandibi,
+      name: Kazandibi,
+      meals: [dessert],
+      tier: core,
+      look_alike: sutlu-tatli,
+      commons: [Kazandibi],
+    }
+  - {
+      id: tavuk-gogsu,
+      name: Tavuk göğsü tatlısı,
+      meals: [dessert],
+      tier: extended,
+      look_alike: sutlu-tatli,
+    }
+  - {
+      id: revani,
+      name: Revani,
+      meals: [dessert],
+      tier: core,
+      look_alike: serbetli-tatli,
+      commons: [Revani],
+    }
+  - {
+      id: sekerpare,
+      name: Şekerpare,
+      meals: [dessert],
+      tier: core,
+      look_alike: serbetli-tatli,
+    }
+  - {
+      id: tulumba,
+      name: Tulumba,
+      meals: [dessert],
+      tier: core,
+      look_alike: serbetli-tatli,
+      commons: [Tulumba],
+    }
+  - {
+      id: lokma,
+      name: Lokma,
+      meals: [dessert],
+      tier: core,
+      look_alike: serbetli-tatli,
+      commons: [Lokma],
+    }
+  - { id: kadayif, name: Kadayıf, meals: [dessert], tier: core }
+  - { id: ekmek-kadayifi, name: Ekmek kadayıfı, meals: [dessert], tier: core }
+  - { id: asure, name: Aşure, meals: [dessert], tier: core, commons: [Aşure] }
+  - { id: irmik-helvasi, name: İrmik helvası, meals: [dessert], tier: core }
+  - { id: un-helvasi, name: Un helvası, meals: [dessert], tier: extended }
+  - { id: dondurma, name: Dondurma, meals: [dessert, snack], tier: core }
+  - {
+      id: lokum,
+      name: Lokum,
+      meals: [dessert, snack],
+      tier: core,
+      commons: [Lokum],
+    }
+  - { id: kek-dilim, name: Kek (dilim), meals: [dessert, snack], tier: core }
+  - { id: kurabiye, name: Kurabiye, meals: [dessert, snack], tier: core }
+  - { id: brownie, name: Brownie, meals: [dessert], tier: core }
+  - { id: cheesecake, name: Cheesecake, meals: [dessert], tier: core }
+  - { id: tiramisu, name: Tiramisu, meals: [dessert], tier: extended }
+  - { id: profiterol, name: Profiterol, meals: [dessert], tier: core }
+  - {
+      id: supangle,
+      name: Supangle,
+      meals: [dessert],
+      tier: extended,
+      look_alike: sutlu-tatli,
+    }
+  - { id: gullac, name: Güllaç, meals: [dessert], tier: extended }
+  - { id: kabak-tatlisi, name: Kabak tatlısı, meals: [dessert], tier: core }
+  - { id: ayva-tatlisi, name: Ayva tatlısı, meals: [dessert], tier: extended }
+  - { id: pasta-dilim, name: Pasta (dilim), meals: [dessert], tier: core }
+  - { id: waffle, name: Waffle, meals: [dessert, breakfast], tier: core }
+
+  # --- Meyve ve kuruyemiş (ara öğün) -------------------------------------
+  - { id: elma, name: Elma, meals: [snack], tier: core }
+  - { id: muz, name: Muz, meals: [snack], tier: core }
+  - { id: portakal, name: Portakal, meals: [snack], tier: core }
+  - { id: mandalina, name: Mandalina, meals: [snack], tier: core }
+  - { id: uzum, name: Üzüm, meals: [snack], tier: core }
+  - { id: karpuz, name: Karpuz, meals: [snack], tier: core }
+  - { id: kavun, name: Kavun, meals: [snack], tier: core }
+  - { id: cilek, name: Çilek, meals: [snack], tier: core }
+  - { id: seftali, name: Şeftali, meals: [snack], tier: core }
+  - { id: kayisi, name: Kayısı, meals: [snack], tier: core }
+  - { id: kiraz, name: Kiraz, meals: [snack], tier: core }
+  - { id: nar, name: Nar, meals: [snack], tier: extended }
+  - { id: incir, name: İncir, meals: [snack], tier: extended }
+  - { id: kivi, name: Kivi, meals: [snack], tier: extended }
+  - { id: armut, name: Armut, meals: [snack], tier: core }
+  - {
+      id: karisik-kuruyemis,
+      name: Karışık kuruyemiş,
+      meals: [snack],
+      tier: core,
+    }
+  - { id: badem, name: Badem, meals: [snack], tier: extended }
+  - { id: ceviz, name: Ceviz, meals: [snack], tier: extended }
+  - { id: findik, name: Fındık, meals: [snack], tier: extended }
+  - { id: leblebi, name: Leblebi, meals: [snack], tier: extended }
+  - { id: cekirdek, name: Çekirdek, meals: [snack], tier: extended }
+
+  # --- İçecekler (bardakta/kupada tanınabilenler) -------------------------
+  - { id: cay, name: Çay (ince belli bardak), meals: [drink], tier: pilot }
+  - {
+      id: turk-kahvesi,
+      name: Türk kahvesi,
+      meals: [drink],
+      tier: core,
+      commons: [Turkish coffee],
+    }
+  - { id: ayran, name: Ayran, meals: [drink], tier: core, commons: [Ayran] }
+  - { id: limonata, name: Limonata, meals: [drink], tier: extended }
+  - { id: meyve-suyu, name: Meyve suyu, meals: [drink], tier: extended }
+  - { id: sut-bardak, name: Süt (bardak), meals: [drink], tier: extended }
+  - { id: salep, name: Salep, meals: [drink], tier: extended }
+  - { id: cikolata-sicak, name: Sıcak çikolata, meals: [drink], tier: extended }

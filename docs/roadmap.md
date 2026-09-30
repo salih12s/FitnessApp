@@ -4,16 +4,18 @@ This file is the source of truth for planned work. Task prompts such as "impleme
 
 ## Status
 
-| Phase | Title                      | Schema change | Status |
-| ----- | -------------------------- | ------------- | ------ |
-| 0     | Precision redesign         | No            | Done   |
-| 1     | Log corrections            | No            | Done   |
-| 2     | Workout sessions           | Yes           | Done   |
-| 3     | Advanced reports           | No            | Done   |
-| 4     | Programs and templates     | Yes           | Done   |
-| 5     | Profile and account        | Yes           | Done   |
-| 6     | Coach and client mode      | Yes           | Done   |
-| 7     | Offline logging (optional) | No            | Next   |
+| Phase | Title                      | Schema change | Status                               |
+| ----- | -------------------------- | ------------- | ------------------------------------ |
+| 0     | Precision redesign         | No            | Done                                 |
+| 1     | Log corrections            | No            | Done                                 |
+| 2     | Workout sessions           | Yes           | Done                                 |
+| 3     | Advanced reports           | No            | Done                                 |
+| 4     | Programs and templates     | Yes           | Done                                 |
+| 5     | Profile and account        | Yes           | Done                                 |
+| 6     | Coach and client mode      | Yes           | Done                                 |
+| 7     | Nutrition log              | Yes           | Next                                 |
+| 8     | Offline logging (optional) | No            | Later                                |
+| 9     | Turkish food model         | No            | Started (plan and training pipeline) |
 
 Update this table when a phase is finished.
 
@@ -22,7 +24,7 @@ Update this table when a phase is finished.
 - Follow `AGENTS.md`, `docs/design-system.md` (UI), and `docs/database.md` (schema).
 - UI copy is Turkish. Code, comments, and docs are English.
 - Finish with `npm run format`, `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`, all passing.
-- Schema-changing phases add a Prisma migration and update `docs/database.md`. Test migrations on the local database first (`env-local.bat`, see `docs/development.md`), never directly on the live Hostinger database. Never delete or rewrite existing workout data.
+- Schema-changing phases add a Prisma migration and update `docs/database.md`. Test migrations on the local database first (`set-local-env.bat`, see `docs/development.md`), never directly on the live Hostinger database. Never delete or rewrite existing workout data.
 - Add unit tests for new pure logic (for example validation or calculations) next to the existing `*.test.ts` files in `apps/web/src/lib`.
 
 ## Phase 1: Log corrections
@@ -89,7 +91,7 @@ Schema change. Groups the exercises a user logs in one visit to the gym into a s
   - Index `(userId, startedAt DESC)`.
 - `ExerciseLog.sessionId`: nullable, relation to `WorkoutSession` with `onDelete: SetNull` so removing a session can never remove workout history. Index `sessionId`. Existing rows stay `null`; the migration must not touch existing data.
 - A user has at most one active session. MySQL has no partial unique index, so enforce this in the service inside a transaction.
-- Create the migration with `npm run prisma:migrate -- --name add_workout_sessions` against the local database (`env-local.bat` first). Update `docs/database.md` (relationship tree, entities, deletion behavior) and add a short note in `docs/development.md` that this migration must be applied on Hostinger before deploying the new build.
+- Create the migration with `npm run prisma:migrate -- --name add_workout_sessions` against the local database (`set-local-env.bat` first). Update `docs/database.md` (relationship tree, entities, deletion behavior) and add a short note in `docs/development.md` that this migration must be applied on Hostinger before deploying the new build.
 
 ### 2b. API
 
@@ -198,10 +200,53 @@ Athlete side (`coaches`):
 - A coach can enter logs for a client and edit or delete only those.
 - Migration applied locally, `docs/database.md` updated, pure logic tested, full verification passing, screens checked at 375px and desktop in both themes.
 
+## Phase 7: Nutrition log
+
+Schema change. A personal food diary next to the training log: what was eaten each day, with calories and macros, against daily targets. It follows the same rules as the rest of the app: data first, mobile first, one accent, every value owned by exactly one user.
+
+### 7a. Schema
+
+- `FoodEntry` (table `food_entries`): `userId`, `eatenOn` (`DATE`, the user's local calendar day), `meal` (enum `breakfast`, `lunch`, `dinner`, `snack`), `name`, optional `servingLabel` (for example `150 g` or `2 dilim`), `calories` (integer kcal), `proteinG`, `carbsG`, `fatG` (`DECIMAL(5,1)`, default 0), optional `note`. Index `(userId, eatenOn)`.
+- `SavedFood` (table `saved_foods`): the user's favorite foods for one-tap re-adding; unique `(userId, name)`.
+- `NutritionGoal` (table `nutrition_goals`): one row per user with a daily `calories` target and optional `proteinG`, `carbsG`, `fatG` targets.
+- User-owned rows use `RESTRICT` like other user data; account deletion removes them explicitly, in the same transaction and order as everything else.
+
+### 7b. API
+
+Everything is under `/api/nutrition`, requires the access token, and filters by the caller's `userId` (another user's id is a 404).
+
+- `GET /days/:date`: the day's entries plus totals (calories, protein, carbs, fat), per-meal totals, and the goal.
+- `POST /entries`, `PATCH /entries/:id`, `DELETE /entries/:id`. At most 200 entries per day.
+- `POST /copy { fromDate, toDate, meal? }`: copies a day (or one meal) so repeated meals take one tap.
+- `GET /summary?to=YYYY-MM-DD&days=` (7 to 90): daily totals for the trend chart.
+- `GET /goal`, `PUT /goal`, `DELETE /goal`.
+- `GET /foods` (saved and recent foods), `POST /foods`, `DELETE /foods/:id`.
+- `POST /entries/batch`: up to 20 foods for one meal in a transaction (used by photo analysis).
+- `GET /catalog?q=`: the built-in food catalog. `GET /catalog/packaged?q=`: Open Food Facts products (503 when that service is unavailable, 20 requests a minute).
+- `GET /features` (`{ photoAnalysis }`) and `POST /photo-analysis`: the body is the raw image (JPEG, PNG, or WebP, at most 4 MB). 503 when no `ANTHROPIC_API_KEY` is set or the Claude API is unavailable, 429 at the daily limit, 422 when the model declines the photo.
+- Dates are the user's local calendar day sent as `YYYY-MM-DD`; the server never guesses a timezone.
+
+### 7c. Web
+
+- New navigation item `Beslenme` and page `/app/nutrition`: a day navigator, a calorie ring with remaining calories, protein, carbs and fat bars against the goal, and the four meals with their entries, each with inline add, edit, and delete.
+- The add form fills from saved and recent foods, calculates calories from the macros (4, 4, and 9 kcal per gram) when the calories are left empty, and can save the food to favorites.
+- Copy yesterday, a 14-day calorie trend against the goal with the average, and a goal form.
+- **Food search:** a built-in catalog of about 140 common foods with Turkish names and aliases, generated from USDA FoodData Central SR Legacy (public domain), searched by name, alias, and typo. Amounts are entered in grams and scaled from per-100 g values. On request the server also searches packaged products on Open Food Facts (cached, rate limited, never stored).
+- **Photo analysis (optional):** the user photographs a meal, Claude estimates each food's portion, calories, and macros, and the user reviews, edits, and adds them in one step. It needs `ANTHROPIC_API_KEY`, is limited per user and per site per day, sends the photo only for that request, and always presents the numbers as estimates.
+- Demo accounts get two weeks of sample entries and a goal.
+
+### Done when
+
+- A user can log, edit, delete, and copy meals and set a goal; totals and the ring match the entries.
+- Users can never read or change each other's entries, foods, or goals; account deletion removes them.
+- Migration applied locally, `docs/database.md` updated, pure logic tested, full verification passing, screens checked at 375px and desktop in both themes.
+
 ## Later phases (summary)
 
-- **Phase 7, offline logging (optional):** queue logs in IndexedDB while offline and send them when the connection returns.
+- **Phase 8, offline logging (optional):** queue logs in IndexedDB while offline and send them when the connection returns.
+- **Phase 9, Turkish food model:** our own image model for about 150 to 200 Turkish dishes, trained in `ml/` and run in the browser. The plan, data rules, quality gates, and the proposed free and contact-us tiers are in [food-model.md](food-model.md). No schema change; the web integration is one step of that plan.
 - Coach comments on logs (after phase 6).
+- Coach view of a client's nutrition log (after phase 7).
 
 ## Decisions already made
 

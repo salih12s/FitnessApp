@@ -1,0 +1,13 @@
+# Training environment for the Turkish food recognition model (see docs/food-model.md).
+# PyTorch is installed separately with the CUDA 12.8 build that RTX 50-series GPUs need:
+#   .venv\Scripts\pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+timm>=1.0
+pillow>=10
+numpy>=1.26
+pyyaml>=6
+scikit-learn>=1.4
+onnx>=1.16
+onnxruntime>=1.19
+onnxscript>=0.1
+tqdm>=4.66
+requests>=2.32

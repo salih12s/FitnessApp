@@ -21,7 +21,11 @@ export function BottomNavigation() {
       <div
         className={cn(
           'mx-auto grid max-w-lg px-1 sm:px-2',
-          items.length === 6 ? 'grid-cols-6' : 'grid-cols-5',
+          items.length >= 7
+            ? 'grid-cols-7'
+            : items.length === 6
+              ? 'grid-cols-6'
+              : 'grid-cols-5',
         )}
       >
         {items.map(({ icon: Icon, label, shortLabel, to }) => {
@@ -52,8 +56,13 @@ export function BottomNavigation() {
                 className="size-5"
                 strokeWidth={isActive ? 2.25 : 1.75}
               />
-              <span className="whitespace-nowrap">
-                {items.length === 6 ? shortLabel : label}
+              <span
+                className={cn(
+                  'whitespace-nowrap',
+                  items.length >= 7 && 'text-[0.625rem]',
+                )}
+              >
+                {items.length >= 6 ? shortLabel : label}
               </span>
             </Link>
           );

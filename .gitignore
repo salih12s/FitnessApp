@@ -17,3 +17,9 @@ apps/api/src/generated/prisma/
 Thumbs.db
 .idea/
 .vscode/
+
+# Food model training workspace (docs/food-model.md): environment, photos, runs
+ml/.venv/
+ml/data/
+ml/runs/
+__pycache__/

@@ -51,6 +51,14 @@ export function getAuthErrorMessage(error: unknown): string {
       return 'Bu kullanıcı adı zaten alınmış.';
     }
 
+    if (error.status === 429) {
+      return 'Çok fazla deneme yaptın. Birkaç dakika bekleyip tekrar dene.';
+    }
+
+    if (error.status === 503) {
+      return 'Demo şu an yoğun. Birkaç saniye sonra tekrar dene.';
+    }
+
     return error.message;
   }
 

@@ -13,6 +13,12 @@ if not exist "apps\api\.env.local" (
 
 copy /y "apps\api\.env.local" "apps\api\.env" >nul || goto :error
 echo apps\api\.env yerel ayarlara geçirildi.
+node scripts\show-env.mjs
+netstat -ano | findstr /R /C:":3001 .*LISTENING" >nul && (
+  echo.
+  echo UYARI: API su an calisiyor ve eski .env ayarlariyla devam eder.
+  echo npm run dev penceresini kapatip yeniden baslatin.
+)
 
 call npm run prisma:migrate:deploy || goto :error
 call npm run prisma:seed || goto :error

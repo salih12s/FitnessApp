@@ -152,7 +152,7 @@ export function MuscleGroupsPage() {
             </Link>
           </div>
         }
-        description="Bir kas grubu seç ya da doğrudan hareket ara."
+        description="Bir kas grubu seç ya da hareketi ada, kasa veya ekipmana göre ara."
         title={`${getGreeting(new Date())}, ${user?.username ?? ''}`}
       />
 
@@ -224,7 +224,7 @@ export function MuscleGroupsPage() {
             id="exercise-search"
             name="exercise-search"
             onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Hareket ara, örneğin bench press"
+            placeholder="Hareket, kas ya da ekipman ara: göğüs, dambıl, barfiks…"
             type="search"
             value={searchQuery}
           />
@@ -267,7 +267,7 @@ export function MuscleGroupsPage() {
             searchQueryResult.isSuccess &&
             searchResults.length === 0 ? (
               <FeedbackPanel
-                description={`“${normalizedSearchQuery}” için eşleşen bir hareket bulunamadı.`}
+                description={`“${normalizedSearchQuery}” için eşleşen bir hareket bulunamadı. Hareket adı, kas grubu ya da ekipman (halter, dambıl, kablo) yazmayı dene.`}
                 icon={Search}
                 title="Sonuç bulunamadı"
               />

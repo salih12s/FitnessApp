@@ -21,4 +21,9 @@ export default tseslint.config(
       '@typescript-eslint/no-misused-promises': 'off',
     },
   },
+  {
+    // node:test's describe()/it() return promises that the runner collects.
+    files: ['src/**/*.test.ts'],
+    rules: { '@typescript-eslint/no-floating-promises': 'off' },
+  },
 );

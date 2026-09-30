@@ -6,11 +6,12 @@ import {
   House,
   UserRound,
   Users,
+  Utensils,
 } from 'lucide-react';
 
 export interface NavigationItem {
   label: string;
-  /** Used by the six-item mobile bar, where full labels do not fit. */
+  /** Used by the six- and seven-item mobile bars, where full labels do not fit. */
   shortLabel: string;
   to: string;
   icon: LucideIcon;
@@ -29,6 +30,12 @@ const trainingItems: readonly NavigationItem[] = [
     shortLabel: 'Program',
     to: '/app/programs',
     icon: ClipboardList,
+  },
+  {
+    label: 'Beslenme',
+    shortLabel: 'Beslenme',
+    to: '/app/nutrition',
+    icon: Utensils,
   },
   {
     label: 'Raporlar',

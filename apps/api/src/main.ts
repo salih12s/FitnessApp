@@ -5,6 +5,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import { raw } from 'express';
 import type { NextFunction, Request, Response } from 'express';
 
 import { AppModule } from './app.module.js';
@@ -28,6 +29,21 @@ function serveWebApp(app: NestExpressApplication): void {
   });
 }
 
+/**
+ * How many reverse proxies sit in front of the app. Behind a proxy every
+ * request would otherwise appear to come from the proxy's IP, which would put
+ * all visitors in one rate-limit bucket. Trusting more hops than exist lets
+ * clients forge their IP through X-Forwarded-For, so it defaults to none.
+ */
+function readTrustProxyHops(value: string | undefined): number {
+  if (value === undefined || value.trim() === '') return 0;
+  const hops = Number(value);
+  if (!Number.isSafeInteger(hops) || hops < 0) {
+    throw new Error('TRUST_PROXY_HOPS must be a non-negative integer.');
+  }
+  return hops;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
@@ -37,7 +53,19 @@ async function bootstrap() {
     'http://localhost:3005',
   );
 
+  const trustProxyHops = readTrustProxyHops(
+    config.get<string>('TRUST_PROXY_HOPS'),
+  );
+  if (trustProxyHops > 0) {
+    app.set('trust proxy', trustProxyHops);
+  }
+
   app.setGlobalPrefix('api');
+  // Meal photos arrive as raw image bytes, so they skip the JSON body parser.
+  app.use(
+    '/api/nutrition/photo-analysis',
+    raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '4mb' }),
+  );
   serveWebApp(app);
   app.useGlobalPipes(
     new ValidationPipe({

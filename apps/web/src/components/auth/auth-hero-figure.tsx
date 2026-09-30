@@ -28,13 +28,10 @@ export function AuthHeroFigure() {
   }, []);
 
   return (
-    <div
-      aria-hidden="true"
-      className="relative flex h-full flex-col items-center"
-    >
+    <div aria-hidden="true" className="absolute inset-0">
       <m.svg
         animate={{ opacity: 1, scale: 1 }}
-        className="h-full w-auto"
+        className="absolute left-1/2 top-[-4%] h-[116%] w-auto -translate-x-1/2"
         initial={{ opacity: 0, scale: 0.96 }}
         preserveAspectRatio="xMidYMin meet"
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -55,16 +52,17 @@ export function AuthHeroFigure() {
         ))}
       </m.svg>
 
-      <div className="absolute left-1/2 top-[46%] -translate-x-1/2">
+      <div className="absolute left-1/2 top-[max(1.25rem,env(safe-area-inset-top))] -translate-x-1/2">
         <AnimatePresence initial={false} mode="wait">
           <m.span
             animate={{ opacity: 1, y: 0 }}
-            className="block rounded-sm border border-border bg-surface px-2.5 py-1 text-xs font-semibold text-foreground shadow-[0_4px_12px_-6px_var(--shadow-tint)]"
+            className="flex items-center gap-2 rounded-sm border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground shadow-[0_4px_12px_-6px_var(--shadow-tint)]"
             exit={{ opacity: 0, y: -6 }}
             initial={{ opacity: 0, y: 6 }}
             key={activeName}
             transition={{ duration: 0.25 }}
           >
+            <span className="size-1.5 rounded-full bg-primary" />
             {activeName}
           </m.span>
         </AnimatePresence>

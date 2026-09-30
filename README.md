@@ -284,7 +284,7 @@ npm install
 **Windows, hazır yerel veritabanı ile:**
 
 ```powershell
-.\env-local.bat   # MariaDB'yi indirip başlatır, .env oluşturur, migration ve seed çalıştırır
+.\set-local-env.bat   # MariaDB'yi indirip başlatır, .env oluşturur, migration ve seed çalıştırır
 npm run dev       # web: http://localhost:3005  API: http://localhost:3001/api
 ```
 
